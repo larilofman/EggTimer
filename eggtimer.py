@@ -102,7 +102,7 @@ class state_set():
         element_frame.grid(row=1, columnspan=self.timer.get_root_width())
         setup_grid(element_frame, 5, 4)
 
-        hours = self.add_digit_widget(element_frame, 'h', 1)
+        hours = self.add_digit_widget(element_frame, 'h', 1, max_value=99)
         minutes = self.add_digit_widget(element_frame, 'min', 2)
         seconds = self.add_digit_widget(element_frame, 's', 3)
 
@@ -111,9 +111,9 @@ class state_set():
         button_run.grid(
             row=2, columnspan=self.timer.get_root_width(), pady=(0, 30))
 
-    def add_digit_widget(self, frame, text, object_index):
+    def add_digit_widget(self, frame, text, object_index, max_value=59):
 
-        digit_field = digit_input(frame, text, object_index)
+        digit_field = digit_input(frame, text, object_index, max_value)
 
         button_plus = Button(frame, height=2, width=5,
                              text="+", command=digit_field.add)
@@ -129,11 +129,12 @@ class state_set():
 
 class digit_input():
 
-    def __init__(self, frame, text, object_index):
+    def __init__(self, frame, text, object_index, max_value):
 
         global font_name
         self.font_name = font_name
         self.frame = frame
+        self.max_value = max_value
 
         self.vcmd = None
         self.register()
@@ -147,16 +148,26 @@ class digit_input():
         self.digit_field.bind("<FocusOut>", self.on_focus_out)
 
     def on_focus_in(self, event):
-        print('focusin', self.value.get())
+        #print('focusin', self.value.get())
         if self.value.get() == str(0):
             self.value.set('')
 
     def on_focus_out(self, event):
-        print('focusout')
+        # print('focusout')
+
         if not self.value.get():
             self.value.set('0')
+        elif int(self.value.get()) > self.max_value:
+            self.value.set(self.max_value)
+        else:
+            if self.value.get()[0] == '0':
+                self.value.set(self.value.get()[1:])
 
     def digit_callback(self, P, *dummy):
+
+        # if len(P) >= 2 and P[0] == '0':
+        #    return False
+
         if len(P) < 3 and str.isdigit(P) or P == "":
             return True
         else:
