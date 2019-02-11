@@ -55,7 +55,7 @@ def setup_grid(element, columns, rows):
     for r in range(0, rows):
         element.rowconfigure(r, weight=1)
 
-    print(element.grid_size())
+    # print(element.grid_size())
 
 
 class timer():
@@ -89,7 +89,7 @@ class state_set():
     def __init__(self, timer):
         global font_name
         self.timer = timer
-        print(timer.seconds)
+        # print(timer.seconds)
         self.font_name = font_name
         self.init_elements()
 
@@ -102,37 +102,77 @@ class state_set():
         element_frame.grid(row=1, columnspan=self.timer.get_root_width())
         setup_grid(element_frame, 5, 4)
 
-        hours = self.add_digit_input(element_frame, 'h', 1)
-        minutes = self.add_digit_input(element_frame, 'min', 2)
-        seconds = self.add_digit_input(element_frame, 's', 3)
+        hours = self.add_digit_widget(element_frame, 'h', 1)
+        minutes = self.add_digit_widget(element_frame, 'min', 2)
+        seconds = self.add_digit_widget(element_frame, 's', 3)
 
         button_run = Button(self.timer.root, height=1,
                             width=5, font=(self.font_name, 24), text='Start')
         button_run.grid(
             row=2, columnspan=self.timer.get_root_width(), pady=(0, 30))
 
-    def digit_callback(self, P):
+    def add_digit_widget(self, frame, text, object_index):
+
+        digit_field = digit_input(frame, text, object_index)
+
+        button_plus = Button(frame, height=2, width=5,
+                             text="+", command=digit_field.add)
+        button_plus.grid(row=0, column=object_index, padx=5)
+
+        button_minus = Button(frame, height=2, width=5,
+                              text="-", command=digit_field.substract)
+        button_minus.grid(row=2, column=object_index, padx=5)
+
+        Label(frame, text=text, font=(self.font_name, 12)).grid(
+            row=4, column=object_index)
+
+
+class digit_input():
+
+    def __init__(self, frame, text, object_index):
+
+        global font_name
+        self.font_name = font_name
+        self.frame = frame
+
+        self.vcmd = None
+        self.register()
+
+        self.value = StringVar(value='0')
+
+        self.digit_field = Entry(self.frame, width=2, font=(
+            self.font_name, 24), validate='all', validatecommand=(self.vcmd, '%P'), justify=CENTER, textvariable=self.value)
+        self.digit_field.grid(row=1, column=object_index, padx=5)
+        self.digit_field.bind("<FocusIn>", self.on_focus_in)
+        self.digit_field.bind("<FocusOut>", self.on_focus_out)
+
+    def on_focus_in(self, event):
+        print('focusin', self.value.get())
+        if self.value.get() == str(0):
+            self.value.set('')
+
+    def on_focus_out(self, event):
+        print('focusout')
+        if not self.value.get():
+            self.value.set('0')
+
+    def digit_callback(self, P, *dummy):
         if len(P) < 3 and str.isdigit(P) or P == "":
             return True
         else:
             return False
 
-    def add_digit_input(self, frame, text, object_index):
+    def register(self):
+        self.vcmd = self.frame.register(self.digit_callback)
 
-        vcmd = (frame.register(self.digit_callback))
+    def add(self):
+        self.digit_field.focus()
+        print(self.digit_field.get())
+        print("add")
 
-        digit_field = Entry(frame, width=2, font=(
-            self.font_name, 24), validate='all', validatecommand=(vcmd, '%P'), justify=CENTER)
-        digit_field.grid(row=1, column=object_index, padx=5)
-
-        button_plus = Button(frame, height=2, width=5, text="+")
-        button_plus.grid(row=0, column=object_index, padx=5)
-
-        button_minus = Button(frame, height=2, width=5, text="-")
-        button_minus.grid(row=2, column=object_index, padx=5)
-
-        Label(frame, text=text, font=(self.font_name, 12)).grid(
-            row=4, column=object_index)
+    def substract(self):
+        self.digit_field.focus()
+        print("substract")
 
 
 init_app()
