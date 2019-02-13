@@ -1,4 +1,5 @@
 from threading import Timer as TTimer
+import time
 import json
 from tkinter import *
 
@@ -180,6 +181,7 @@ class state_run(timer_state):
     def __init__(self, root):
         self.time_left = 0
         self.time_var = StringVar()
+        self.time_paused = 0  # When timer was paused
         super().__init__(root)
 
         self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -244,6 +246,7 @@ class state_run(timer_state):
         self.is_running = False
         self.button_pause.grid_remove()
         self.button_start.grid()
+        self.time_paused = time.time()
 
     def stop(self):
         self.is_running = False
@@ -252,10 +255,24 @@ class state_run(timer_state):
 
     def run(self):
         if self.is_running:
+
+            # Check if a second has passed since timer was paused so it can run again
+            if self.time_paused + 1 >= time.time():
+                # When timer can start running again
+                start_time = self.time_paused + 1 - time.time()
+                self.threading_timer.cancel()
+                self.threading_timer = TTimer(start_time, self.run)
+                self.threading_timer.start()
+                return
+            else:
+                self.time_paused = 0
+
+            # Alarm if time's up
             if self.time_left <= 0:
                 self.is_running = False
                 self.alarm()
-            print(self.time_left)
+
+            # Update time field and rerun after a second
             self.update_time_var()
             self.threading_timer = TTimer(1, self.run)
             self.threading_timer.start()
