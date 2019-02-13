@@ -1,10 +1,12 @@
-from threading import Timer as TTimer
 import time
 import json
 from tkinter import *
+from colour import Color
 
 # Font used application wide
-G_FONT_NAME = "Verdana"
+g_font_name = "Verdana"
+g_color_bg = '#cdcdcd'
+g_color_alarm = '#ff0000'
 
 
 def init_app():
@@ -69,7 +71,7 @@ class timer():
         self.create_or_set_state(state_run)
 
     def change_state_to_alarm(self):
-        print('alarm')
+        self.create_or_set_state(state_alarm)
 
     def create_or_set_state(self, new_state):
         """Sets state to a new one
@@ -112,9 +114,8 @@ class timer_state():
     """Base class for all states"""
 
     def __init__(self, timer):
-        global G_FONT_NAME
         self.timer = timer
-        self.font_name = G_FONT_NAME
+        self.font_name = g_font_name
         self.columns = 5
         self.rows = 3
         self.row_height = 160
@@ -124,14 +125,14 @@ class timer_state():
     def init_elements(self):
 
         # Container
-        self.state_frame = Frame(self.timer.root)
+        self.state_frame = Frame(self.timer.root, bg=g_color_bg)
         setup_grid(self.state_frame, self.columns, self.rows, self.row_height)
         self.state_frame.grid(sticky=NSEW)
 
         # State header
         self.header_text = StringVar()
         self.state_header = Label(
-            self.state_frame, font=(self.font_name, 24), textvariable=self.header_text)
+            self.state_frame, font=(self.font_name, 24), textvariable=self.header_text, bg=g_color_bg)
         self.state_header.grid(row=0, columnspan=self.columns)
 
     def disable(self):
@@ -149,10 +150,10 @@ class state_set(timer_state):
 
         super().init_elements()
 
-        self.header_text.set('Set time')
+        self.header_text.set('Set time:')
 
         # Digit container
-        digit_input_frame = Frame(self.state_frame)
+        digit_input_frame = Frame(self.state_frame, bg=g_color_bg)
         digit_input_frame.grid(row=1, columnspan=self.columns)
         setup_grid(digit_input_frame, 5, 4, 0)
 
@@ -190,7 +191,7 @@ class state_run(timer_state):
 
         super().init_elements()
 
-        self.header_text.set('Time remaining')
+        self.header_text.set('Time remaining:')
 
         # Time output
         time_output = Entry(self.state_frame, width=8,
@@ -254,15 +255,14 @@ class state_run(timer_state):
         self.button_stop.focus()
 
     def run(self):
+
         if self.is_running:
 
             # Check if a second has passed since timer was paused so it can run again
             if self.time_paused + 1 >= time.time():
-                # When timer can start running again
+                # When the timer can start running again
                 start_time = self.time_paused + 1 - time.time()
-                self.threading_timer.cancel()
-                self.threading_timer = TTimer(start_time, self.run)
-                self.threading_timer.start()
+                self.timer.root.after(int(1000 * start_time), self.run)
                 return
             else:
                 self.time_paused = 0
@@ -274,21 +274,79 @@ class state_run(timer_state):
 
             # Update time field and rerun after a second
             self.update_time_var()
-            self.threading_timer = TTimer(1, self.run)
-            self.threading_timer.start()
+            self.timer.root.after(1000, self.run)
             self.time_left -= 1
             self.time_left = max(0, self.time_left)
-
-        else:
-            self.threading_timer.cancel()
 
     def alarm(self):
         self.timer.change_state_to_alarm()
 
     def on_closing(self):
         """Stop threaded timer on app close"""
-        print('closed')
-        self.threading_timer.cancel()
+        self.timer.root.destroy()
+
+
+class state_alarm(timer_state):
+    """State for setting the timer."""
+
+    def __init__(self, root):
+        self.color_change_direction = 1
+        self.color_scale = None
+        self.current_color_index = 0
+        super().__init__(root)
+        self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def init_elements(self):
+
+        super().init_elements()
+        self.header_text.set('Time is up!')
+
+        self.button_ok = Button(self.state_frame, height=1,
+                                width=5, font=(self.font_name, 24), text='OK', command=self.shut_alarm)
+        self.button_ok.grid(row=2, column=2)
+
+    def enable(self):
+        super().enable()
+        color1 = Color(g_color_bg)
+        color2 = Color(g_color_alarm)
+        self.color_scale = list(color1.range_to(color2, 30))
+        self.play_alarm()
+
+    def play_alarm(self):
+
+        self.set_next_color()
+        self.after_id = self.timer.root.after(30, self.play_alarm)
+
+    def set_next_color(self):
+
+        #print(self.current_color_index, len(self.color_scale))
+        self.set_bg_color(self.color_scale[self.current_color_index])
+
+        if self.color_change_direction > 0:
+            if self.current_color_index < len(self.color_scale) - 1:
+                self.current_color_index += 1
+            else:
+                self.color_change_direction = -1
+                self.current_color_index -= 1
+        else:
+            if self.current_color_index > 0:
+                self.current_color_index -= 1
+            else:
+                self.color_change_direction = 1
+                self.current_color_index += 1
+
+    def set_bg_color(self, color):
+
+        self.state_frame.configure(background=color)
+        self.state_header.configure(background=color)
+
+    def shut_alarm(self):
+        self.timer.root.after_cancel(self.after_id)
+        self.timer.change_state_to_set()
+
+    def on_closing(self):
+        """Stop threaded timer on app close"""
+        self.shut_alarm()
         self.timer.root.destroy()
 
 
@@ -296,8 +354,8 @@ class digit_input():
 
     def __init__(self, frame, value, text, column, max_value=59):
 
-        global G_FONT_NAME
-        self.font_name = G_FONT_NAME
+        global g_font_name
+        self.font_name = g_font_name
         self.frame = frame
         self.max_value = max_value
 
@@ -320,7 +378,7 @@ class digit_input():
         self.button_minus.grid(row=2, column=column, padx=5)
 
         # Unit text
-        self.unit_text = Label(frame, text=text, font=(self.font_name, 12)).grid(
+        self.unit_text = Label(frame, text=text, font=(self.font_name, 12), bg=g_color_bg).grid(
             row=4, column=column)
 
     def get_value(self):
