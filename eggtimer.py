@@ -59,28 +59,34 @@ class timer():
             json.dump(data, f, indent=2)
 
     def change_state_to_set(self):
-        self.create_or_set_state(state_set, 'set')
+        self.create_or_set_state(state_set)
 
     def change_state_to_run(self):
         print('running, seconds: ', self.get_time_in_secs())
         self.set_seconds_to_file(self.get_time_in_secs())
 
-        self.create_or_set_state(state_run, 'run')
+        self.create_or_set_state(state_run)
 
-    def create_or_set_state(self, new_state, state_name):
-        """Gets state from dictionary or creates and adds one"""
+    def create_or_set_state(self, new_state):
+        """Sets state to a new one
+
+        Disables old state.
+        Finds new state from dictionary or creates and adds it.
+        Key: class
+        Value: instance
+        """
 
         if self.state:
             self.state.disable()
 
-        if self.states.get(state_name):
-            self.state = self.states.get(state_name)
+        if self.states.get(new_state):
+            self.state = self.states.get(new_state)
             self.state.enable()
-            print(f'{state_name} state exists')
+            print(f'{new_state} state exists')
         else:
             self.state = new_state(self)
-            self.states[state_name] = self.state
-            print(f'{state_name} state doesnt exist')
+            self.states[new_state] = self.state
+            print(f'{new_state} state doesnt exist')
 
     def get_time_from_secs(self):
         """Converts seconds to hours, minutes and seconds"""
@@ -101,16 +107,6 @@ class timer():
 class timer_state():
     """Base class for all states"""
 
-    def disable(self):
-        self.state_frame.grid_remove()
-
-    def enable(self):
-        self.state_frame.grid()
-
-
-class state_set(timer_state):
-    """State for setting the timer."""
-
     def __init__(self, timer):
         global G_FONT_NAME
         self.timer = timer
@@ -122,17 +118,33 @@ class state_set(timer_state):
 
     def init_elements(self):
 
-        # Container elements
+        # Container
         self.state_frame = Frame(self.timer.root)
         setup_grid(self.state_frame, self.columns, self.rows, self.row_height)
         self.state_frame.grid(sticky=NSEW)
-        digit_input_frame = Frame(self.state_frame)
-        digit_input_frame.grid(row=1, columnspan=self.columns)
-        setup_grid(digit_input_frame, 5, 4, 0)
 
         # State header
         Label(self.state_frame, text="Set time",
               font=(self.font_name, 24)).grid(row=0, columnspan=self.columns)
+
+    def disable(self):
+        self.state_frame.grid_remove()
+
+    def enable(self):
+        self.state_frame.grid()
+
+
+class state_set(timer_state):
+    """State for setting the timer."""
+
+    def init_elements(self):
+
+        super().init_elements()
+
+        # Digit container
+        digit_input_frame = Frame(self.state_frame)
+        digit_input_frame.grid(row=1, columnspan=self.columns)
+        setup_grid(digit_input_frame, 5, 4, 0)
 
         # Digit inputs
         time = self.timer.get_time_from_secs()
@@ -151,6 +163,24 @@ class state_set(timer_state):
     def run(self):
         self.timer.change_state_to_run()
         self.button_start.focus()
+
+
+class state_run(timer_state):
+    """State for setting the timer."""
+
+    def init_elements(self):
+
+        super().init_elements()
+
+        # Buttons
+        self.button_stop = Button(self.state_frame, height=1,
+                                  width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
+        self.button_stop.grid(
+            row=2, columnspan=self.columns)
+
+    def stop(self):
+        self.timer.change_state_to_set()
+        self.button_stop.focus()
 
 
 class digit_input():
@@ -230,48 +260,6 @@ class digit_input():
             new_value = self.max_value
 
         self.value.set(new_value)
-
-
-class state_run(timer_state):
-    """State for setting the timer."""
-
-    def __init__(self, timer):
-        global G_FONT_NAME
-        self.timer = timer
-        self.font_name = G_FONT_NAME
-        self.columns = 5
-        self.rows = 3
-        self.row_height = 160
-        self.init_elements()
-
-    def init_elements(self):
-
-        # Container elements
-        self.state_frame = Frame(self.timer.root)
-        setup_grid(self.state_frame, self.columns, self.rows, self.row_height)
-        self.state_frame.grid(sticky=NSEW)
-
-        # State header
-        Label(self.state_frame, text="Time remaining:",
-              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns)
-
-        # Digit inputs
-        # time = self.timer.get_time_from_secs()
-        # self.input_hrs = digit_input(digit_input_frame,
-        #                              time['hrs'], 'h', 1, max_value=99)
-        # self.input_mins = digit_input(
-        #     digit_input_frame, time['mins'], 'min', 2)
-        # self.input_secs = digit_input(digit_input_frame, time['secs'], 's', 3)
-
-        # Buttons
-        self.button_stop = Button(self.state_frame, height=1,
-                                  width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
-        self.button_stop.grid(
-            row=2, columnspan=self.columns)
-
-    def stop(self):
-        self.timer.change_state_to_set()
-        self.button_stop.focus()
 
 
 init_app()
