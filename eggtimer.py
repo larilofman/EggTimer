@@ -1,4 +1,4 @@
-import time
+from threading import Timer as TTimer
 import json
 from tkinter import *
 
@@ -18,6 +18,7 @@ def init_app():
     root.title('EggTimer')
     root.call('wm', 'iconphoto', root._w, PhotoImage(file='icon.png'))
     maintimer = timer(root)
+
     root.mainloop()
 
 
@@ -65,6 +66,9 @@ class timer():
         self.set_seconds_to_file(self.seconds)
 
         self.create_or_set_state(state_run)
+
+    def change_state_to_alarm(self):
+        print('alarm')
 
     def create_or_set_state(self, new_state):
         """Sets state to a new one
@@ -161,11 +165,11 @@ class state_set(timer_state):
 
         # Start button
         self.button_start = Button(self.state_frame, height=1,
-                                   width=5, font=(self.font_name, 24), text='Start', command=self.run)
+                                   width=5, font=(self.font_name, 24), text='Start', command=self.start_timer)
         self.button_start.grid(
             row=2, columnspan=self.columns)
 
-    def run(self):
+    def start_timer(self):
         self.timer.change_state_to_run()
         self.button_start.focus()
 
@@ -177,6 +181,8 @@ class state_run(timer_state):
         self.time_left = 0
         self.time_var = StringVar()
         super().__init__(root)
+
+        self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def init_elements(self):
 
@@ -191,15 +197,24 @@ class state_run(timer_state):
         time_output.grid(row=1, columnspan=self.columns)
 
         # Buttons
+        self.button_start = Button(self.state_frame, height=1,
+                                   width=5, font=(self.font_name, 24), text='Start', command=self.start)
+        self.button_start.grid(row=2, column=1)
+        self.button_start.grid_remove()
+
+        self.button_pause = Button(self.state_frame, height=1,
+                                   width=5, font=(self.font_name, 24), text='Pause', command=self.pause)
+        self.button_pause.grid(row=2, column=1)
+
         self.button_stop = Button(self.state_frame, height=1,
                                   width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
-        self.button_stop.grid(
-            row=2, column=2)
+        self.button_stop.grid(row=2, column=3)
 
     def enable(self):
         super().enable()
         self.time_left = self.timer.seconds
         self.update_time_var()
+        self.start()
 
     def update_time_var(self):
         time_dict = self.timer.get_time_from_secs(self.time_left)
@@ -214,17 +229,50 @@ class state_run(timer_state):
         secs = time_dict['secs']
 
         if not hrs and not mins:
-            print('not hours and mins')
             self.time_var.set(f"{secs}")
         elif not hrs:
-            print('not hours')
             self.time_var.set(f"{mins}.{secs}")
         else:
             self.time_var.set(f"{hrs}.{mins}.{secs}")
 
+    def start(self):
+        self.is_running = True
+        self.run()
+        self.button_pause.grid()
+
+    def pause(self):
+        self.is_running = False
+        self.button_pause.grid_remove()
+        self.button_start.grid()
+
     def stop(self):
+        self.is_running = False
         self.timer.change_state_to_set()
         self.button_stop.focus()
+
+    def run(self):
+        if self.is_running:
+            if self.time_left <= 0:
+                self.is_running = False
+                self.alarm()
+            print(self.time_left)
+            self.update_time_var()
+            self.threading_timer = TTimer(1, self.run)
+            self.threading_timer.start()
+            self.time_left -= 1
+            self.time_left = max(0, self.time_left)
+
+        else:
+            self.threading_timer.cancel()
+
+    def alarm(self):
+        self.timer.change_state_to_alarm()
+
+    def on_closing(self):
+        """Stop threaded timer on app close"""
+        print('closed')
+        self.threading_timer.cancel()
+        self.timer.root.destroy()
 
 
 class digit_input():
