@@ -5,31 +5,6 @@ from tkinter import *
 # Font used application wide
 G_FONT_NAME = "Verdana"
 
-# Timer:
-# - keeps user defined time saved in a settings file
-# - time is handled as seconds
-
-# Timer has four states: set, run, paused, alarm
-
-# Set state:
-# - input box for hours, minutes and seconds
-# - start button
-
-# Run state:
-# - big output box showing time remaining, updated every second
-# - stop button which changes state to set
-# - pause button which changes state to paused
-
-# Paused state:
-# - big output box showing time remaining, paused
-# - start button
-
-# Alarm state:
-# - big output box showing informative text
-# - screen flashing with red color
-# - plays an alarm sound
-# - big ok button
-
 
 def init_app():
     """Sets up application window and starts loop."""
@@ -38,7 +13,7 @@ def init_app():
     root.geometry("480x480")
     root.resizable(False, False)
 
-    setup_grid(root, 1, 1)
+    setup_grid(root, 1, 1, 0)
 
     root.title('EggTimer')
     root.call('wm', 'iconphoto', root._w, PhotoImage(file='icon.png'))
@@ -46,14 +21,14 @@ def init_app():
     root.mainloop()
 
 
-def setup_grid(element, columns, rows):
+def setup_grid(element, columns, rows, row_height):
     """Create a grid of the size columns*rows on element."""
 
     for c in range(0, columns):
         element.columnconfigure(c, weight=1)
 
     for r in range(0, rows):
-        element.rowconfigure(r, weight=1)
+        element.rowconfigure(r, weight=1, minsize=row_height)
 
     # print(element.grid_size())
 
@@ -93,6 +68,7 @@ class timer():
         self.create_or_set_state(state_run, 'run')
 
     def create_or_set_state(self, new_state, state_name):
+        """Gets state from dictionary or creates and adds one"""
 
         if self.state:
             self.state.disable()
@@ -107,13 +83,14 @@ class timer():
             print(f'{state_name} state doesnt exist')
 
     def get_time_from_secs(self):
-
+        """Converts seconds to hours, minutes and seconds"""
         hrs = int(self.seconds / 3600)
         mins = int((self.seconds % 3600) / 60)
         secs = int(self.seconds % 60)
         return {'hrs': hrs, 'mins': mins, 'secs': secs}
 
     def get_time_in_secs(self):
+        """Converts hours, minutes and seconds to seconds"""
         hrs = int(self.state.input_hrs.get_value())
         mins = int(self.state.input_mins.get_value())
         secs = int(self.state.input_secs.get_value())
@@ -140,21 +117,22 @@ class state_set(timer_state):
         self.font_name = G_FONT_NAME
         self.columns = 5
         self.rows = 3
+        self.row_height = 160
         self.init_elements()
 
     def init_elements(self):
 
         # Container elements
         self.state_frame = Frame(self.timer.root)
-        setup_grid(self.state_frame, self.columns, self.rows)
+        setup_grid(self.state_frame, self.columns, self.rows, self.row_height)
         self.state_frame.grid(sticky=NSEW)
         digit_input_frame = Frame(self.state_frame)
         digit_input_frame.grid(row=1, columnspan=self.columns)
-        setup_grid(digit_input_frame, 5, 4)
+        setup_grid(digit_input_frame, 5, 4, 0)
 
         # State header
         Label(self.state_frame, text="Set time",
-              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns, pady=(30, 0))
+              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns)
 
         # Digit inputs
         time = self.timer.get_time_from_secs()
@@ -168,7 +146,7 @@ class state_set(timer_state):
         self.button_start = Button(self.state_frame, height=1,
                                    width=5, font=(self.font_name, 24), text='Start', command=self.run)
         self.button_start.grid(
-            row=2, columnspan=self.columns, pady=(0, 30))
+            row=2, columnspan=self.columns)
 
     def run(self):
         self.timer.change_state_to_run()
@@ -263,21 +241,19 @@ class state_run(timer_state):
         self.font_name = G_FONT_NAME
         self.columns = 5
         self.rows = 3
+        self.row_height = 160
         self.init_elements()
 
     def init_elements(self):
 
         # Container elements
         self.state_frame = Frame(self.timer.root)
-        setup_grid(self.state_frame, self.columns, self.rows)
+        setup_grid(self.state_frame, self.columns, self.rows, self.row_height)
         self.state_frame.grid(sticky=NSEW)
-        # digit_input_frame = Frame(self.state_frame)
-        # digit_input_frame.grid(row=1, columnspan=self.columns)
-        # setup_grid(digit_input_frame, 5, 4)
 
         # State header
         Label(self.state_frame, text="Time remaining:",
-              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns, pady=(30, 0))
+              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns)
 
         # Digit inputs
         # time = self.timer.get_time_from_secs()
@@ -291,7 +267,7 @@ class state_run(timer_state):
         self.button_stop = Button(self.state_frame, height=1,
                                   width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
         self.button_stop.grid(
-            row=2, columnspan=self.columns, pady=(0, 30))
+            row=2, columnspan=self.columns)
 
     def stop(self):
         self.timer.change_state_to_set()
