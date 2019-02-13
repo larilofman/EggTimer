@@ -68,7 +68,7 @@ class timer():
         self.create_or_set_state(state_set)
 
     def change_state_to_run(self):
-        #print('running, seconds: ', self.get_time_in_secs())
+        """Save time as seconds and change state to run"""
         self.seconds = self.get_time_in_secs()
         self.set_seconds_to_file(self.seconds)
 
@@ -92,11 +92,9 @@ class timer():
         if self.states.get(new_state):
             self.state = self.states.get(new_state)
             self.state.enable()
-            #print(f'{new_state} state exists')
         else:
             self.state = new_state(self)
             self.states[new_state] = self.state
-            #print(f'{new_state} state doesnt exist')
 
     def get_time_from_secs(self, seconds):
         """Converts seconds to hours, minutes and seconds"""
@@ -119,7 +117,6 @@ class timer_state():
 
     def __init__(self, timer):
         self.timer = timer
-        self.font_name = g_font_name
         self.columns = 5
         self.rows = 3
         self.row_height = 160
@@ -136,7 +133,7 @@ class timer_state():
         # State header
         self.header_text = StringVar()
         self.state_header = Label(
-            self.state_frame, font=(self.font_name, 24), textvariable=self.header_text, bg=g_color_bg)
+            self.state_frame, font=(g_font_name, 24), textvariable=self.header_text, bg=g_color_bg)
         self.state_header.grid(row=0, columnspan=self.columns)
 
     def disable(self):
@@ -171,7 +168,7 @@ class state_set(timer_state):
 
         # Start button
         self.button_start = Button(self.state_frame, height=1,
-                                   width=5, font=(self.font_name, 24), text='Start', command=self.start_timer)
+                                   width=5, font=(g_font_name, 24), text='Start', command=self.start_timer)
         self.button_start.grid(
             row=2, columnspan=self.columns)
 
@@ -189,8 +186,6 @@ class state_run(timer_state):
         self.time_paused = 0  # When timer was paused
         super().__init__(root)
 
-        self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-
     def init_elements(self):
 
         super().init_elements()
@@ -199,22 +194,22 @@ class state_run(timer_state):
 
         # Time output
         time_output = Entry(self.state_frame, width=8,
-                            font=(self.font_name, 44), justify=CENTER, textvariable=self.time_var)
+                            font=(g_font_name, 44), justify=CENTER, textvariable=self.time_var)
         time_output['state'] = 'readonly'
         time_output.grid(row=1, columnspan=self.columns)
 
         # Buttons
         self.button_start = Button(self.state_frame, height=1,
-                                   width=5, font=(self.font_name, 24), text='Start', command=self.start)
+                                   width=5, font=(g_font_name, 24), text='Start', command=self.start)
         self.button_start.grid(row=2, column=1)
-        self.button_start.grid_remove()
+        self.button_start.grid_remove()  # Hide start button at start
 
         self.button_pause = Button(self.state_frame, height=1,
-                                   width=5, font=(self.font_name, 24), text='Pause', command=self.pause)
+                                   width=5, font=(g_font_name, 24), text='Pause', command=self.pause)
         self.button_pause.grid(row=2, column=1)
 
         self.button_stop = Button(self.state_frame, height=1,
-                                  width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
+                                  width=5, font=(g_font_name, 24), text='Stop', command=self.stop)
         self.button_stop.grid(row=2, column=3)
 
     def enable(self):
@@ -243,23 +238,30 @@ class state_run(timer_state):
             self.time_var.set(f"{hrs}.{mins}.{secs}")
 
     def start(self):
+        """Starts the timer and toggles visible button"""
         self.is_running = True
         self.run()
+        self.button_start.grid_remove()
         self.button_pause.grid()
 
     def pause(self):
+        """Pauses the timer and toggles visible button"""
         self.is_running = False
         self.button_pause.grid_remove()
         self.button_start.grid()
         self.time_paused = time.time()
 
     def stop(self):
+        """Stops the timer and changes state to set"""
         self.is_running = False
         self.timer.change_state_to_set()
         self.button_stop.focus()
 
     def run(self):
+        """Runs the timer
 
+        Updates output field and calculates time remaining every second.
+        """
         if self.is_running:
 
             # Check if a second has passed since timer was paused so it can run again
@@ -285,10 +287,6 @@ class state_run(timer_state):
     def alarm(self):
         self.timer.change_state_to_alarm()
 
-    def on_closing(self):
-        """Stop threaded timer on app close"""
-        self.timer.root.destroy()
-
 
 class state_alarm(timer_state):
     """State for setting the timer."""
@@ -297,7 +295,6 @@ class state_alarm(timer_state):
 
         self.color_scale = self.get_alarm_colors()
         super().__init__(root)
-        self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def init_elements(self):
 
@@ -306,7 +303,7 @@ class state_alarm(timer_state):
         self.header_text.set('Time is up!')
 
         self.button_ok = Button(self.state_frame, height=1,
-                                width=5, font=(self.font_name, 24), text='OK', command=self.shut_alarm)
+                                width=5, font=(g_font_name, 24), text='OK', command=self.shut_alarm)
         self.button_ok.grid(row=2, column=2)
 
     def enable(self):
@@ -317,18 +314,18 @@ class state_alarm(timer_state):
         self.play_alarm()
 
     def get_alarm_colors(self):
+        """Returns a list of color gradient"""
         color1 = Color(g_color_bg)
         color2 = Color(g_color_alarm)
         return list(color1.range_to(color2, 30))
 
     def play_alarm(self):
-
+        """Flashes app background and plays a sound"""
         self.set_next_color()
         self.after_id = self.timer.root.after(30, self.play_alarm)
 
     def set_next_color(self):
 
-        #print(self.current_color_index, len(self.color_scale))
         self.set_bg_color(self.color_scale[self.current_color_index])
 
         if self.color_change_direction > 0:
@@ -345,7 +342,6 @@ class state_alarm(timer_state):
                 self.current_color_index += 1
 
     def set_bg_color(self, color):
-
         self.state_frame.configure(background=color)
         self.state_header.configure(background=color)
 
@@ -353,18 +349,11 @@ class state_alarm(timer_state):
         self.timer.root.after_cancel(self.after_id)
         self.timer.change_state_to_set()
 
-    def on_closing(self):
-        """Stop threaded timer on app close"""
-        self.shut_alarm()
-        self.timer.root.destroy()
-
 
 class digit_input():
 
     def __init__(self, frame, value, text, column, max_value=59):
 
-        global g_font_name
-        self.font_name = g_font_name
         self.frame = frame
         self.max_value = max_value
 
@@ -372,7 +361,7 @@ class digit_input():
         self.vcmd = self.frame.register(self.validate_digits)
         self.value = StringVar(value=value)
         self.digit_field = Entry(self.frame, width=2, font=(
-            self.font_name, 24), validate='all', validatecommand=(self.vcmd, '%P'), justify=CENTER, textvariable=self.value)
+            g_font_name, 24), validate='all', validatecommand=(self.vcmd, '%P'), justify=CENTER, textvariable=self.value)
         self.digit_field.grid(row=1, column=column, padx=5)
         self.digit_field.bind("<Button-1>", self.on_click)
         self.digit_field.bind("<FocusOut>", self.on_focus_out)
@@ -387,7 +376,7 @@ class digit_input():
         self.button_minus.grid(row=2, column=column, padx=5)
 
         # Unit text
-        self.unit_text = Label(frame, text=text, font=(self.font_name, 12), bg=g_color_bg).grid(
+        self.unit_text = Label(frame, text=text, font=(g_font_name, 12), bg=g_color_bg).grid(
             row=4, column=column)
 
     def get_value(self):
