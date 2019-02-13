@@ -36,7 +36,7 @@ def setup_grid(element, columns, rows, row_height):
 
 
 class timer():
-    """Handles user input and states."""
+    """Handles states."""
 
     def __init__(self, root):
         self.seconds = self.get_seconds_from_file()
@@ -49,7 +49,11 @@ class timer():
         """Returns seconds from json or 240 on exception."""
         try:
             with open('time.json') as f:
-                return json.load(f)['seconds']
+                data = json.load(f)['seconds']
+                if type(data) == int:
+                    return data
+                else:
+                    return 240
         except:
             return 240
 
@@ -290,15 +294,15 @@ class state_alarm(timer_state):
     """State for setting the timer."""
 
     def __init__(self, root):
-        self.color_change_direction = 1
-        self.color_scale = None
-        self.current_color_index = 0
+
+        self.color_scale = self.get_alarm_colors()
         super().__init__(root)
         self.timer.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def init_elements(self):
 
         super().init_elements()
+
         self.header_text.set('Time is up!')
 
         self.button_ok = Button(self.state_frame, height=1,
@@ -307,10 +311,15 @@ class state_alarm(timer_state):
 
     def enable(self):
         super().enable()
+        self.color_change_direction = 1
+        self.current_color_index = 0
+        self.set_bg_color(g_color_bg)
+        self.play_alarm()
+
+    def get_alarm_colors(self):
         color1 = Color(g_color_bg)
         color2 = Color(g_color_alarm)
-        self.color_scale = list(color1.range_to(color2, 30))
-        self.play_alarm()
+        return list(color1.range_to(color2, 30))
 
     def play_alarm(self):
 

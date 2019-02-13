@@ -14,10 +14,9 @@ Set state:
 Run state:
 - big output box showing time remaining, updated every second
 - stop button which changes state to set
-- pause button which changes state to paused
+- pause button which changes pauses the timer and replaces itself with play button
 
 Alarm state:
-- big output box showing informative text
 - screen flashing with red color
 - plays an alarm sound
-- big ok button
+- ok button
