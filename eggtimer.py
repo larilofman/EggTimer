@@ -30,8 +30,6 @@ def setup_grid(element, columns, rows, row_height):
     for r in range(0, rows):
         element.rowconfigure(r, weight=1, minsize=row_height)
 
-    # print(element.grid_size())
-
 
 class timer():
     """Handles user input and states."""
@@ -62,8 +60,9 @@ class timer():
         self.create_or_set_state(state_set)
 
     def change_state_to_run(self):
-        print('running, seconds: ', self.get_time_in_secs())
-        self.set_seconds_to_file(self.get_time_in_secs())
+        #print('running, seconds: ', self.get_time_in_secs())
+        self.seconds = self.get_time_in_secs()
+        self.set_seconds_to_file(self.seconds)
 
         self.create_or_set_state(state_run)
 
@@ -82,17 +81,17 @@ class timer():
         if self.states.get(new_state):
             self.state = self.states.get(new_state)
             self.state.enable()
-            print(f'{new_state} state exists')
+            #print(f'{new_state} state exists')
         else:
             self.state = new_state(self)
             self.states[new_state] = self.state
-            print(f'{new_state} state doesnt exist')
+            #print(f'{new_state} state doesnt exist')
 
-    def get_time_from_secs(self):
+    def get_time_from_secs(self, seconds):
         """Converts seconds to hours, minutes and seconds"""
-        hrs = int(self.seconds / 3600)
-        mins = int((self.seconds % 3600) / 60)
-        secs = int(self.seconds % 60)
+        hrs = int(seconds / 3600)
+        mins = int((seconds % 3600) / 60)
+        secs = int(seconds % 60)
         return {'hrs': hrs, 'mins': mins, 'secs': secs}
 
     def get_time_in_secs(self):
@@ -115,6 +114,7 @@ class timer_state():
         self.rows = 3
         self.row_height = 160
         self.init_elements()
+        self.enable()
 
     def init_elements(self):
 
@@ -124,14 +124,17 @@ class timer_state():
         self.state_frame.grid(sticky=NSEW)
 
         # State header
-        Label(self.state_frame, text="Set time",
-              font=(self.font_name, 24)).grid(row=0, columnspan=self.columns)
+        self.header_text = StringVar()
+        self.state_header = Label(
+            self.state_frame, font=(self.font_name, 24), textvariable=self.header_text)
+        self.state_header.grid(row=0, columnspan=self.columns)
 
     def disable(self):
         self.state_frame.grid_remove()
 
     def enable(self):
-        self.state_frame.grid()
+        if not self.state_frame.grid_info():
+            self.state_frame.grid()
 
 
 class state_set(timer_state):
@@ -141,13 +144,15 @@ class state_set(timer_state):
 
         super().init_elements()
 
+        self.header_text.set('Set time')
+
         # Digit container
         digit_input_frame = Frame(self.state_frame)
         digit_input_frame.grid(row=1, columnspan=self.columns)
         setup_grid(digit_input_frame, 5, 4, 0)
 
         # Digit inputs
-        time = self.timer.get_time_from_secs()
+        time = self.timer.get_time_from_secs(self.timer.seconds)
         self.input_hrs = digit_input(digit_input_frame,
                                      time['hrs'], 'h', 1, max_value=99)
         self.input_mins = digit_input(
@@ -168,15 +173,54 @@ class state_set(timer_state):
 class state_run(timer_state):
     """State for setting the timer."""
 
+    def __init__(self, root):
+        self.time_left = 0
+        self.time_var = StringVar()
+        super().__init__(root)
+
     def init_elements(self):
 
         super().init_elements()
+
+        self.header_text.set('Time remaining')
+
+        # Time output
+        time_output = Entry(self.state_frame, width=8,
+                            font=(self.font_name, 44), justify=CENTER, textvariable=self.time_var)
+        time_output['state'] = 'readonly'
+        time_output.grid(row=1, columnspan=self.columns)
 
         # Buttons
         self.button_stop = Button(self.state_frame, height=1,
                                   width=5, font=(self.font_name, 24), text='Stop', command=self.stop)
         self.button_stop.grid(
-            row=2, columnspan=self.columns)
+            row=2, column=2)
+
+    def enable(self):
+        super().enable()
+        self.time_left = self.timer.seconds
+        self.update_time_var()
+
+    def update_time_var(self):
+        time_dict = self.timer.get_time_from_secs(self.time_left)
+
+        # Add leading zero to single digits
+        # for key, value in time_dict.items():
+        #     if value < 10:
+        #         time_dict[key] = '0' + str(value)
+
+        hrs = time_dict['hrs']
+        mins = time_dict['mins']
+        secs = time_dict['secs']
+
+        if not hrs and not mins:
+            print('not hours and mins')
+            self.time_var.set(f"{secs}")
+        elif not hrs:
+            print('not hours')
+            self.time_var.set(f"{mins}.{secs}")
+        else:
+            self.time_var.set(f"{hrs}.{mins}.{secs}")
 
     def stop(self):
         self.timer.change_state_to_set()
