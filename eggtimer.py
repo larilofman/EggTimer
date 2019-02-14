@@ -2,6 +2,7 @@ import time
 import json
 from tkinter import *
 from colour import Color
+import winsound
 
 # Font used application wide
 g_font_name = "Verdana"
@@ -33,6 +34,18 @@ def setup_grid(element, columns, rows, row_height):
 
     for r in range(0, rows):
         element.rowconfigure(r, weight=1, minsize=row_height)
+
+
+def play_audio():
+    # import playsound
+    # sound = playsound.playsound(
+    #     'Radio-Interruption-SoundBible.com-1434341263.mp3', False)
+    winsound.PlaySound('Radio-Interruption-SoundBible.com-1434341263.wav',
+                       winsound.SND_LOOP + winsound.SND_ASYNC)
+
+
+def stop_audio():
+    winsound.PlaySound(None, winsound.SND_PURGE)
 
 
 class timer():
@@ -311,7 +324,8 @@ class state_alarm(timer_state):
         self.color_change_direction = 1
         self.current_color_index = 0
         self.set_bg_color(g_color_bg)
-        self.play_alarm()
+        self.change_color()
+        self.start_alarm_sound()
 
     def get_alarm_colors(self):
         """Returns a list of color gradient"""
@@ -319,10 +333,13 @@ class state_alarm(timer_state):
         color2 = Color(g_color_alarm)
         return list(color1.range_to(color2, 30))
 
-    def play_alarm(self):
+    def change_color(self):
         """Flashes app background and plays a sound"""
         self.set_next_color()
-        self.after_id = self.timer.root.after(30, self.play_alarm)
+        self.after_id = self.timer.root.after(30, self.change_color)
+
+    def start_alarm_sound(self):
+        play_audio()
 
     def set_next_color(self):
 
@@ -348,6 +365,7 @@ class state_alarm(timer_state):
     def shut_alarm(self):
         self.timer.root.after_cancel(self.after_id)
         self.timer.change_state_to_set()
+        stop_audio()
 
 
 class digit_input():

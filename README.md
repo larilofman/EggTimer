@@ -1,5 +1,5 @@
 # EggTimer
-Timer application made with Python
+Windows desktop timer application made with Python
 
 Timer:
 - keeps user defined time saved in a settings file
@@ -18,5 +18,7 @@ Run state:
 
 Alarm state:
 - screen flashing with red color
-- plays an alarm sound
+- plays an alarm sound with winsound
 - ok button
+
+Alarm sound by Mike Koenig 
