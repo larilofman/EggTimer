@@ -196,7 +196,9 @@ class state_run(timer_state):
     def __init__(self, root):
         self.time_left = 0
         self.time_var = StringVar()
-        self.time_paused = 0  # When timer was paused
+        self.time_started = 0  # When was timer started
+        self.time_paused = 0  # When was timer paused
+        self.time_paused_total = 0  # How long has timer been paused for
         super().__init__(root)
 
     def init_elements(self):
@@ -227,11 +229,13 @@ class state_run(timer_state):
 
     def enable(self):
         super().enable()
-        self.time_left = self.timer.seconds
-        self.update_time_var()
+        self.time_started = time.time()
+        self.time_paused = 0
+        self.time_paused_total = 0
         self.start()
 
     def update_time_var(self):
+
         time_dict = self.timer.get_time_from_secs(self.time_left)
 
         # Add leading zero to single digits
@@ -253,9 +257,13 @@ class state_run(timer_state):
     def start(self):
         """Starts the timer and toggles visible button"""
         self.is_running = True
-        self.run()
         self.button_start.grid_remove()
         self.button_pause.grid()
+
+        if self.time_paused:
+            self.time_paused_total += time.time() - self.time_paused
+
+        self.run()
 
     def pause(self):
         """Pauses the timer and toggles visible button"""
@@ -273,18 +281,16 @@ class state_run(timer_state):
     def run(self):
         """Runs the timer
 
-        Updates output field and calculates time remaining every second.
+        Updates output field and calculates time remaining every iteration.
         """
         if self.is_running:
 
-            # Check if a second has passed since timer was paused so it can run again
-            if self.time_paused + 1 >= time.time():
-                # When the timer can start running again
-                start_time = self.time_paused + 1 - time.time()
-                self.timer.root.after(int(1000 * start_time), self.run)
-                return
-            else:
-                self.time_paused = 0
+            # Add timer duration and total time it's been paused to starting time and reduce current time
+            self.time_left = self.time_started + self.timer.seconds + \
+                self.time_paused_total - time.time()
+
+            if self.time_left < 0:
+                self.time_left = 0
 
             # Alarm if time's up
             if self.time_left <= 0:
@@ -293,9 +299,7 @@ class state_run(timer_state):
 
             # Update time field and rerun after a second
             self.update_time_var()
-            self.timer.root.after(1000, self.run)
-            self.time_left -= 1
-            self.time_left = max(0, self.time_left)
+            self.timer.root.after(100, self.run)
 
     def alarm(self):
         self.timer.change_state_to_alarm()
