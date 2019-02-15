@@ -42,9 +42,9 @@ def add_menu(root, timer):
     settings_menu = Menu(menu, tearoff=0)
     menu.add_cascade(label="Display mode", menu=settings_menu)
     settings_menu.add_radiobutton(
-        label="h:m:s", variable=timer.output_with_zeros, value=0, command=empty_func)
+        label="h:m:s", variable=timer.display_mode, value=0, command=timer.toggle_display_mode)
     settings_menu.add_radiobutton(
-        label="hh:mm:ss", variable=timer.output_with_zeros, value=1, command=empty_func)
+        label="hh:mm:ss", variable=timer.display_mode, value=1, command=timer.toggle_display_mode)
 
 
 def empty_func():
@@ -79,7 +79,8 @@ class timer():
         self.root = root
         self.states = {}
         self.change_state_to_set()
-        self.output_with_zeros = IntVar()  # Boolean for output having leading zeros
+        # Boolean for output having leading zeros
+        self.display_mode = IntVar(value=self.load_setting('display_mode'))
 
     def get_seconds_from_file(self):
         """Returns seconds from json or 240 on exception."""
@@ -93,12 +94,12 @@ class timer():
         except:
             return 240
 
-    def set_seconds_to_file(self, seconds):
-        """Saves seconds to json file"""
+    # def set_seconds_to_file(self, seconds):
+    #     """Saves seconds to json file"""
 
-        with open('settings.json', 'w') as f:
-            data = {'seconds': seconds}
-            json.dump(data, f, indent=2)
+    #     with open('settings.json', 'w') as f:
+    #         data = {'seconds': seconds}
+    #         json.dump(data, f, indent=2)
 
     def change_state_to_set(self):
         self.create_or_set_state(state_set)
@@ -106,9 +107,10 @@ class timer():
     def change_state_to_run(self):
         """Save time as seconds and change state to run"""
         self.seconds = self.get_time_in_secs()
-        self.set_seconds_to_file(self.seconds)
 
-        self.create_or_set_state(state_run)
+        if self.seconds > 0:
+            self.save_settings({'seconds': self.seconds})
+            self.create_or_set_state(state_run)
 
     def change_state_to_alarm(self):
         self.create_or_set_state(state_alarm)
@@ -147,11 +149,22 @@ class timer():
         total_seconds = hrs*3600 + mins*60 + secs
         return total_seconds
 
-    def enable_leading_zeros(self):
-        self.output_with_zeros = True
+    def toggle_display_mode(self):
+        self.save_settings({'display_mode': self.display_mode.get()})
 
-    def disable_leading_zeros(self):
-        self.output_with_zeros = False
+    def save_settings(self, json_entry):
+
+        with open('settings.json') as f:
+            data = json.load(f)
+
+        with open('settings.json', 'w') as f:
+            data.update(json_entry)
+            json.dump(data, f, indent=2)
+
+    def load_setting(self, json_key):
+        with open('settings.json') as f:
+            data = json.load(f)
+            return data[json_key]
 
 
 class timer_state():
@@ -268,7 +281,7 @@ class state_run(timer_state):
         time_dict = self.timer.get_time_from_secs(self.time_left)
 
         # Add leading zero to single digits
-        if self.timer.output_with_zeros.get():
+        if self.timer.display_mode.get():
             time_dict = self.get_time_with_zeros(time_dict)
 
         hrs = time_dict['hrs']
@@ -439,10 +452,8 @@ class digit_input():
             row=4, column=column)
 
     def get_value(self):
-        if self.value.get():
-            return int(self.value.get())
-        else:  # Empty field
-            return 0
+        self.clamp_value()
+        return int(self.value.get())
 
     def on_click(self, event):
         """Set 0 value to empty"""
@@ -451,10 +462,14 @@ class digit_input():
 
     def on_focus_out(self, event):
         """Sets empty value to zero and limits value to max"""
-        if not self.get_value():
+        self.clamp_value()
+
+    def clamp_value(self):
+        if self.value.get():
+            if int(self.value.get()) > self.max_value:
+                self.value.set(self.max_value)
+        else:
             self.value.set(0)
-        elif int(self.get_value()) > self.max_value:
-            self.value.set(self.max_value)
 
     def validate_digits(self, P):
         """Accepts value of two digits or empty"""
