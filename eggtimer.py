@@ -20,9 +20,35 @@ def init_app():
 
     root.title('EggTimer')
     root.call('wm', 'iconphoto', root._w, PhotoImage(file='icon.png'))
-    maintimer = timer(root)
+
+    main_timer = timer(root)
+
+    add_menu(root, main_timer)
 
     root.mainloop()
+
+
+def add_menu(root, timer):
+    menu = Menu(root)
+    root.config(menu=menu)
+
+    mode_menu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="Timer mode", menu=mode_menu)
+    mode_menu.add_command(label="Egg", command=empty_func)
+    mode_menu.add_command(label="Pomodoro", command=empty_func)
+    # mode_menu.add_separator()
+    # mode_menu.add_command(label="Exit", command=empty_func)
+
+    settings_menu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="Display mode", menu=settings_menu)
+    settings_menu.add_radiobutton(
+        label="h:m:s", variable=timer.output_with_zeros, value=0, command=empty_func)
+    settings_menu.add_radiobutton(
+        label="hh:mm:ss", variable=timer.output_with_zeros, value=1, command=empty_func)
+
+
+def empty_func():
+    pass
 
 
 def setup_grid(element, columns, rows, row_height):
@@ -53,7 +79,7 @@ class timer():
         self.root = root
         self.states = {}
         self.change_state_to_set()
-        self.output_with_zeros = False  # Output has leading zeros
+        self.output_with_zeros = IntVar()  # Boolean for output having leading zeros
 
     def get_seconds_from_file(self):
         """Returns seconds from json or 240 on exception."""
@@ -242,7 +268,7 @@ class state_run(timer_state):
         time_dict = self.timer.get_time_from_secs(self.time_left)
 
         # Add leading zero to single digits
-        if self.timer.output_with_zeros:
+        if self.timer.output_with_zeros.get():
             time_dict = self.get_time_with_zeros(time_dict)
 
         hrs = time_dict['hrs']
@@ -263,7 +289,10 @@ class state_run(timer_state):
         return time
 
     def start(self):
-        """Starts the timer and toggles visible button"""
+        """Starts the timer
+
+        Also toggles the visible button and calculates total time spent paused
+        """
         self.is_running = True
         self.button_start.grid_remove()
         self.button_pause.grid()
@@ -289,7 +318,7 @@ class state_run(timer_state):
     def run(self):
         """Runs the timer
 
-        Updates output field and calculates time remaining every iteration.
+        Updates output field and calculates time remaining on every iteration.
         """
         if self.is_running:
 
@@ -305,7 +334,7 @@ class state_run(timer_state):
                 self.is_running = False
                 self.alarm()
 
-            # Update time field and rerun after a second
+            # Update time field and rerun after a while
             self.update_time_var()
             self.timer.root.after(100, self.run)
 
