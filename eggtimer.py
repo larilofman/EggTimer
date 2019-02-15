@@ -215,11 +215,12 @@ class state_set(timer_state):
 
         # Digit inputs
         time = self.timer.get_time_from_secs(self.timer.seconds)
-        self.input_hrs = digit_input(digit_input_frame,
-                                     time['hrs'], 'h', 1, max_value=99)
+        self.input_hrs = digit_input(
+            digit_input_frame, time['hrs'], 'h', 1, self.check_if_can_start, max_value=99)
         self.input_mins = digit_input(
-            digit_input_frame, time['mins'], 'min', 2)
-        self.input_secs = digit_input(digit_input_frame, time['secs'], 's', 3)
+            digit_input_frame, time['mins'], 'min', 2, self.check_if_can_start)
+        self.input_secs = digit_input(
+            digit_input_frame, time['secs'], 's', 3, self.check_if_can_start)
 
         # Start button
         self.button_start = Button(self.state_frame, height=1,
@@ -228,8 +229,22 @@ class state_set(timer_state):
             row=2, columnspan=self.columns)
 
     def start_timer(self):
+
+        for digit in (self.input_hrs, self.input_mins, self.input_secs):
+            digit.clamp_value()
+
         self.timer.change_state_to_run()
         self.button_start.focus()
+
+    def check_if_can_start(self, *kwargs):
+
+        # Enable start button if there is a time set
+        for digit in (self.input_hrs, self.input_mins, self.input_secs):
+            if digit.get_value() > 0:
+                self.button_start.config(state="normal")
+                return
+
+        self.button_start.config(state="disabled")
 
 
 class state_run(timer_state):
@@ -424,7 +439,7 @@ class state_alarm(timer_state):
 
 class digit_input():
 
-    def __init__(self, frame, value, text, column, max_value=59):
+    def __init__(self, frame, value, text, column, checker_func, max_value=59):
 
         self.frame = frame
         self.max_value = max_value
@@ -432,6 +447,7 @@ class digit_input():
         # Entry field
         self.vcmd = self.frame.register(self.validate_digits)
         self.value = StringVar(value=value)
+        self.value.trace_add('write', checker_func)
         self.digit_field = Entry(self.frame, width=2, font=(
             g_font_name, 24), validate='all', validatecommand=(self.vcmd, '%P'), justify=CENTER, textvariable=self.value)
         self.digit_field.grid(row=1, column=column, padx=5)
@@ -452,8 +468,7 @@ class digit_input():
             row=4, column=column)
 
     def get_value(self):
-        self.clamp_value()
-        return int(self.value.get())
+        return int(self.value.get()) if self.value.get() else 0
 
     def on_click(self, event):
         """Set 0 value to empty"""
@@ -461,10 +476,12 @@ class digit_input():
             self.value.set('')
 
     def on_focus_out(self, event):
-        """Sets empty value to zero and limits value to max"""
+        if self.value.get() == '00':
+            self.value.set(0)
         self.clamp_value()
 
     def clamp_value(self):
+        """Limits value between 0 and max"""
         if self.value.get():
             if int(self.value.get()) > self.max_value:
                 self.value.set(self.max_value)
