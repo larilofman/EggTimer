@@ -135,7 +135,14 @@ class timer():
             self.states[new_state] = self.state
 
     def get_time_from_secs(self, seconds):
-        """Converts seconds to hours, minutes and seconds"""
+        """Converts seconds to hours, minutes and seconds
+
+        Also limits time to 99h 59min 59s
+        """
+
+        if seconds > 359999:
+            seconds = 359999
+
         hrs = int(seconds / 3600)
         mins = int((seconds % 3600) / 60)
         secs = int(seconds % 60)
