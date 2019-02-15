@@ -53,11 +53,12 @@ class timer():
         self.root = root
         self.states = {}
         self.change_state_to_set()
+        self.output_with_zeros = False  # Output has leading zeros
 
     def get_seconds_from_file(self):
         """Returns seconds from json or 240 on exception."""
         try:
-            with open('time.json') as f:
+            with open('settings.json') as f:
                 data = json.load(f)['seconds']
                 if type(data) == int:
                     return data
@@ -69,7 +70,7 @@ class timer():
     def set_seconds_to_file(self, seconds):
         """Saves seconds to json file"""
 
-        with open('time.json', 'w') as f:
+        with open('settings.json', 'w') as f:
             data = {'seconds': seconds}
             json.dump(data, f, indent=2)
 
@@ -119,6 +120,12 @@ class timer():
         secs = int(self.state.input_secs.get_value())
         total_seconds = hrs*3600 + mins*60 + secs
         return total_seconds
+
+    def enable_leading_zeros(self):
+        self.output_with_zeros = True
+
+    def disable_leading_zeros(self):
+        self.output_with_zeros = False
 
 
 class timer_state():
@@ -207,11 +214,11 @@ class state_run(timer_state):
         time_output = Entry(self.state_frame, width=8,
                             font=(g_font_name, 44), justify=CENTER, textvariable=self.time_var)
         time_output['state'] = 'readonly'
-        time_output.grid(row=1, columnspan=self.columns)
+        time_output.grid(row=1, columnspan=self.columns, pady=(0, 24))
 
         # Buttons
-        self.button_start = Button(self.state_frame, height=1,
-                                   width=5, font=(g_font_name, 24), text='Start', command=self.start)
+        self.button_start = Button(self.state_frame, height=1, width=5, font=(
+            g_font_name, 24), text='Start', command=self.start)
         self.button_start.grid(row=2, column=1)
         self.button_start.grid_remove()  # Hide start button at start
 
@@ -235,9 +242,8 @@ class state_run(timer_state):
         time_dict = self.timer.get_time_from_secs(self.time_left)
 
         # Add leading zero to single digits
-        # for key, value in time_dict.items():
-        #     if value < 10:
-        #         time_dict[key] = '0' + str(value)
+        if self.timer.output_with_zeros:
+            time_dict = self.get_time_with_zeros(time_dict)
 
         hrs = time_dict['hrs']
         mins = time_dict['mins']
@@ -249,6 +255,12 @@ class state_run(timer_state):
             self.time_var.set(f"{mins}:{secs}")
         else:
             self.time_var.set(f"{hrs}:{mins}:{secs}")
+
+    def get_time_with_zeros(self, time):
+        for key, value in time.items():
+            if value < 10:
+                time[key] = '0' + str(value)
+        return time
 
     def start(self):
         """Starts the timer and toggles visible button"""
