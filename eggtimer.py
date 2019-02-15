@@ -4,7 +4,6 @@ from tkinter import *
 from colour import Color
 import winsound
 
-# Font used application wide
 g_font_name = "Verdana"
 g_color_bg = '#cdcdcd'
 g_color_alarm = '#ff0000'
@@ -37,9 +36,6 @@ def setup_grid(element, columns, rows, row_height):
 
 
 def play_audio():
-    # import playsound
-    # sound = playsound.playsound(
-    #     'Radio-Interruption-SoundBible.com-1434341263.mp3', False)
     winsound.PlaySound('Radio-Interruption-SoundBible.com-1434341263.wav',
                        winsound.SND_LOOP + winsound.SND_ASYNC)
 
@@ -250,9 +246,9 @@ class state_run(timer_state):
         if not hrs and not mins:
             self.time_var.set(f"{secs}")
         elif not hrs:
-            self.time_var.set(f"{mins}.{secs}")
+            self.time_var.set(f"{mins}:{secs}")
         else:
-            self.time_var.set(f"{hrs}.{mins}.{secs}")
+            self.time_var.set(f"{hrs}:{mins}:{secs}")
 
     def start(self):
         """Starts the timer and toggles visible button"""
@@ -389,12 +385,12 @@ class digit_input():
         self.digit_field.bind("<FocusOut>", self.on_focus_out)
 
         # Buttons
-        self.button_plus = Button(frame, height=2, width=5,
-                                  text="+", command=self.add)
+        self.button_plus = Button(frame, height=1, width=3, font=(
+            g_font_name, 14), text="+", command=self.add)
         self.button_plus.grid(row=0, column=column, padx=5)
 
-        self.button_minus = Button(frame, height=2, width=5,
-                                   text="-", command=self.substract)
+        self.button_minus = Button(frame, height=1, width=3, font=(
+            g_font_name, 14), text="-", command=self.substract)
         self.button_minus.grid(row=2, column=column, padx=5)
 
         # Unit text
