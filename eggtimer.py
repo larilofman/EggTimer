@@ -94,13 +94,6 @@ class timer():
         except:
             return 240
 
-    # def set_seconds_to_file(self, seconds):
-    #     """Saves seconds to json file"""
-
-    #     with open('settings.json', 'w') as f:
-    #         data = {'seconds': seconds}
-    #         json.dump(data, f, indent=2)
-
     def change_state_to_set(self):
         self.create_or_set_state(state_set)
 
@@ -209,6 +202,10 @@ class timer_state():
 class state_set(timer_state):
     """State for setting the timer."""
 
+    def __init__(self, timer):
+        super().__init__(timer)
+        self.check_if_can_start()
+
     def init_elements(self):
 
         super().init_elements()
@@ -244,8 +241,7 @@ class state_set(timer_state):
         self.button_start.focus()
 
     def check_if_can_start(self, *kwargs):
-
-        # Enable start button if there is a time set
+        """Enable start button if there is a time set"""
         for digit in (self.input_hrs, self.input_mins, self.input_secs):
             if digit.get_value() > 0:
                 self.button_start.config(state="normal")
@@ -257,13 +253,13 @@ class state_set(timer_state):
 class state_run(timer_state):
     """State for setting the timer."""
 
-    def __init__(self, root):
+    def __init__(self, timer):
         self.time_left = 0
         self.time_var = StringVar()
         self.time_started = 0  # When was timer started
         self.time_paused = 0  # When was timer paused
         self.time_paused_total = 0  # How long has timer been paused for
-        super().__init__(root)
+        super().__init__(timer)
 
     def init_elements(self):
 
@@ -293,6 +289,7 @@ class state_run(timer_state):
 
     def enable(self):
         super().enable()
+        self.after_id = None
         self.time_started = time.time()
         self.time_paused = 0
         self.time_paused_total = 0
@@ -366,24 +363,27 @@ class state_run(timer_state):
 
             # Alarm if time's up
             if self.time_left <= 0:
-                self.is_running = False
                 self.alarm()
 
             # Update time field and rerun after a while
             self.update_time_var()
-            self.timer.root.after(100, self.run)
+            self.after_id = self.timer.root.after(100, self.run)
 
     def alarm(self):
-        self.timer.change_state_to_alarm()
+        """Changes state to alarm after at least one iteration of run"""
+        if self.after_id:
+            self.is_running = False
+            self.timer.root.after_cancel(self.after_id)
+            self.timer.change_state_to_alarm()
 
 
 class state_alarm(timer_state):
     """State for setting the timer."""
 
-    def __init__(self, root):
+    def __init__(self, timer):
 
         self.color_scale = self.get_alarm_colors()
-        super().__init__(root)
+        super().__init__(timer)
 
     def init_elements(self):
 
