@@ -1,6 +1,7 @@
 {
-  "timer_seconds": 3839,
+  "timer_seconds": 5,
   "pomodoro_work": 333,
   "pomodoro_break": 222,
-  "display_mode": 1
+  "timer_mode": 0,
+  "display_mode": 0
 }

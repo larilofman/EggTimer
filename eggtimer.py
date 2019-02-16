@@ -35,8 +35,9 @@ def add_menu(root, timer):
 
     mode_menu = Menu(menu, tearoff=0)
     menu.add_cascade(label="Timer mode", menu=mode_menu)
-    mode_menu.add_command(label="Egg", command=empty_func)
-    mode_menu.add_command(label="Pomodoro", command=empty_func)
+    mode_menu.add_radiobutton(label="Egg", command=timer.change_state_to_set)
+    mode_menu.add_command(
+        label="Pomodoro", command=timer.change_state_to_set_pomodoro)
     # mode_menu.add_separator()
     # mode_menu.add_command(label="Exit", command=empty_func)
 
@@ -83,8 +84,8 @@ class timer():
         self.root = root
         self.states = {}
         self.change_state_to_set()
-        # Boolean for output having leading zeros
         self.display_mode = IntVar(value=self.settings['display_mode'])
+        self.timer_mode = IntVar(value=self.settings['timer_mode'])
 
     def change_state_to_set(self):
         self.create_or_set_state(state_set)
@@ -99,6 +100,9 @@ class timer():
 
     def change_state_to_alarm(self):
         self.create_or_set_state(state_alarm)
+
+    def change_state_to_set_pomodoro(self):
+        self.create_or_set_state(state_set_pomodoro)
 
     def create_or_set_state(self, new_state):
         """Sets state to a new one
@@ -417,8 +421,12 @@ class state_alarm(timer_state):
         self.state_header.configure(background=color)
 
     def shut_alarm(self):
-        self.timer.root.after_cancel(self.after_id)
         self.timer.change_state_to_set()
+
+    def disable(self):
+        super().disable()
+        print('disable alarm')
+        self.timer.root.after_cancel(self.after_id)
         stop_audio()
 
 
