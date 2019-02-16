@@ -354,9 +354,12 @@ class state_run(timer_state):
     def alarm(self):
         """Changes state to alarm after at least one iteration of run"""
         if self.after_id:
-            self.is_running = False
-            self.timer.root.after_cancel(self.after_id)
             self.timer.change_state_to_alarm()
+
+    def disable(self):
+        super().disable()
+        self.is_running = False
+        self.timer.root.after_cancel(self.after_id)
 
 
 class state_alarm(timer_state):
@@ -403,10 +406,12 @@ class state_alarm(timer_state):
 
         self.set_bg_color(self.color_scale[self.current_color_index])
 
+        # Color changing towards alarm color
         if self.color_change_direction > 0:
+            # Increase index if there is another color
             if self.current_color_index < len(self.color_scale) - 1:
                 self.current_color_index += 1
-            else:
+            else:  # Start going towards normal color
                 self.color_change_direction = -1
                 self.current_color_index -= 1
         else:
@@ -425,7 +430,6 @@ class state_alarm(timer_state):
 
     def disable(self):
         super().disable()
-        print('disable alarm')
         self.timer.root.after_cancel(self.after_id)
         stop_audio()
 
