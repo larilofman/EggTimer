@@ -1,8 +1,8 @@
 import time
-import json
 from tkinter import *
 from colour import Color
 import winsound
+from settings import load_settings, save_settings
 
 g_font_name = "Verdana"
 g_color_bg = '#cdcdcd'
@@ -74,25 +74,13 @@ class timer():
     """Handles states."""
 
     def __init__(self, root):
-        self.seconds = self.get_seconds_from_file()
+        self.seconds = load_settings('seconds')
         self.state = None
         self.root = root
         self.states = {}
         self.change_state_to_set()
         # Boolean for output having leading zeros
-        self.display_mode = IntVar(value=self.load_setting('display_mode'))
-
-    def get_seconds_from_file(self):
-        """Returns seconds from json or 240 on exception."""
-        try:
-            with open('settings.json') as f:
-                data = json.load(f)['seconds']
-                if type(data) == int:
-                    return data
-                else:
-                    return 240
-        except:
-            return 240
+        self.display_mode = IntVar(value=load_settings('display_mode'))
 
     def change_state_to_set(self):
         self.create_or_set_state(state_set)
@@ -102,7 +90,7 @@ class timer():
         self.seconds = self.get_time_in_secs()
 
         if self.seconds > 0:
-            self.save_settings({'seconds': self.seconds})
+            save_settings({'seconds': self.seconds})
             self.create_or_set_state(state_run)
 
     def change_state_to_alarm(self):
@@ -150,21 +138,7 @@ class timer():
         return total_seconds
 
     def toggle_display_mode(self):
-        self.save_settings({'display_mode': self.display_mode.get()})
-
-    def save_settings(self, json_entry):
-
-        with open('settings.json') as f:
-            data = json.load(f)
-
-        with open('settings.json', 'w') as f:
-            data.update(json_entry)
-            json.dump(data, f, indent=2)
-
-    def load_setting(self, json_key):
-        with open('settings.json') as f:
-            data = json.load(f)
-            return data[json_key]
+        save_settings({'display_mode': self.display_mode.get()})
 
 
 class timer_state():
