@@ -1,7 +1,7 @@
 import json
 
 
-def save_settings(json_entry):
+def save_setting(json_entry):
 
     with open('settings.json') as f:
         data = json.load(f)
