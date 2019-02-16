@@ -2,11 +2,12 @@ import time
 from tkinter import *
 from colour import Color
 import winsound
-from settings import load_settings, save_settings
+from settings import load_setting, load_settings, save_settings
 
 g_font_name = "Verdana"
 g_color_bg = '#cdcdcd'
 g_color_alarm = '#ff0000'
+g_audio_alarm = 'Radio-Interruption-SoundBible.com-1434341263.wav'
 
 
 def init_app():
@@ -61,8 +62,8 @@ def setup_grid(element, columns, rows, row_height):
         element.rowconfigure(r, weight=1, minsize=row_height)
 
 
-def play_audio():
-    winsound.PlaySound('Radio-Interruption-SoundBible.com-1434341263.wav',
+def play_audio(audio_file):
+    winsound.PlaySound(audio_file,
                        winsound.SND_LOOP + winsound.SND_ASYNC)
 
 
@@ -74,13 +75,16 @@ class timer():
     """Handles states."""
 
     def __init__(self, root):
-        self.seconds = load_settings('seconds')
+        self.settings = load_settings()
+        self.seconds = self.settings['timer_seconds']
+        self.pomodoro_work = self.settings['pomodoro_work']
+        self.pomodoro_break = self.settings['pomodoro_break']
         self.state = None
         self.root = root
         self.states = {}
         self.change_state_to_set()
         # Boolean for output having leading zeros
-        self.display_mode = IntVar(value=load_settings('display_mode'))
+        self.display_mode = IntVar(value=self.settings['display_mode'])
 
     def change_state_to_set(self):
         self.create_or_set_state(state_set)
@@ -90,7 +94,7 @@ class timer():
         self.seconds = self.get_time_in_secs()
 
         if self.seconds > 0:
-            save_settings({'seconds': self.seconds})
+            save_settings({'timer_seconds': self.seconds})
             self.create_or_set_state(state_run)
 
     def change_state_to_alarm(self):
@@ -389,7 +393,7 @@ class state_alarm(timer_state):
         self.after_id = self.timer.root.after(30, self.change_color)
 
     def start_alarm_sound(self):
-        play_audio()
+        play_audio(g_audio_alarm)
 
     def set_next_color(self):
 
@@ -416,6 +420,66 @@ class state_alarm(timer_state):
         self.timer.root.after_cancel(self.after_id)
         self.timer.change_state_to_set()
         stop_audio()
+
+
+class state_set_pomodoro(timer_state):
+    """State for setting the timer."""
+
+    def __init__(self, timer):
+        super().__init__(timer)
+        self.check_if_can_start()
+
+    def init_elements(self):
+
+        super().init_elements()
+
+        self.header_text.set('Set pomodoro timers:')
+
+        # Digit container
+        digit_input_frame = Frame(self.state_frame, bg=g_color_bg)
+        digit_input_frame.grid(row=1, columnspan=self.columns)
+        setup_grid(digit_input_frame, 5, 4, 0)
+
+        # Digit inputs for work
+        work_time = self.timer.get_time_from_secs(self.timer.pomodoro_work)
+        self.work_hrs = digit_input(
+            digit_input_frame, time['hrs'], 'h', 1, self.check_if_can_start, max_value=99)
+        self.work_mins = digit_input(
+            digit_input_frame, time['mins'], 'min', 2, self.check_if_can_start)
+        self.work_secs = digit_input(
+            digit_input_frame, time['secs'], 's', 3, self.check_if_can_start)
+
+        # Digit inputs for break
+        time = self.timer.get_time_from_secs(self.timer.pomodoro_break)
+        self.work_hrs = digit_input(
+            digit_input_frame, time['hrs'], 'h', 1, self.check_if_can_start, max_value=99)
+        self.work_mins = digit_input(
+            digit_input_frame, time['mins'], 'min', 2, self.check_if_can_start)
+        self.work_secs = digit_input(
+            digit_input_frame, time['secs'], 's', 3, self.check_if_can_start)
+
+        # Start button
+        self.button_start = Button(self.state_frame, height=1,
+                                   width=5, font=(g_font_name, 24), text='Start', command=self.start_timer)
+        self.button_start.grid(
+            row=2, columnspan=self.columns)
+
+    def start_timer(self):
+
+        for digit in (self.input_hrs, self.input_mins, self.input_secs):
+            digit.clamp_value()
+
+        self.timer.change_state_to_run()
+        self.button_start.focus()
+
+    def check_if_can_start(self, *kwargs):
+        """Enable start button if there is a time set"""
+        for digit in (self.input_hrs, self.input_mins, self.input_secs):
+            if digit.get_value() > 0:
+                self.button_start.config(state="normal")
+                return
+
+        self.button_start.config(state="disabled")
 
 
 class digit_input():

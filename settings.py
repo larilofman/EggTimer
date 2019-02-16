@@ -11,7 +11,17 @@ def save_settings(json_entry):
         json.dump(data, f, indent=2)
 
 
-def load_settings(json_key):
+def load_setting(json_key):
+    try:
+        with open('settings.json') as f:
+            data = json.load(f)
+            return data[json_key]
+    except:
+        return 1
+
+
+def load_settings():
+
     with open('settings.json') as f:
         data = json.load(f)
-        return data[json_key]
+        return data
