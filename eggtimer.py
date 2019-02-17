@@ -15,8 +15,19 @@ def init_app():
     """Sets up application window and starts loop."""
 
     root = Tk()
-    root.geometry("480x480")
     root.resizable(False, False)
+
+    app_width = 480
+    app_height = 480
+
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # Calculate x and y coordinates for app
+    x_pos = (screen_width/2) - (app_width/2)
+    y_pos = (screen_height/2) - (app_height/2)
+
+    root.geometry('%dx%d+%d+%d' % (app_width, app_height, x_pos, y_pos))
 
     setup_grid(root, 1, 1, 0)
 
@@ -467,6 +478,7 @@ class state_run_pomodoro(timer_state):
         super().enable()
         self.header_text.set('Work remaining:')
         self.after_id = None
+        self.transition_after_id = None
         self.time_started = time.time()
         self.time_paused = 0
         self.time_paused_total = 0
@@ -556,7 +568,8 @@ class state_run_pomodoro(timer_state):
         if self.after_id:
             self.pause()
             self.on_break = not self.on_break
-            transition_cycles = 51  # How many times to change bg color. 51 takes to red and back
+            # How many times to change bg color. 49 or 51? takes to red and back
+            transition_cycles = 49
             self.color_change_direction = 1  # Start by climbing to red
             self.current_color_index = 0
 
@@ -568,7 +581,6 @@ class state_run_pomodoro(timer_state):
             else:
                 self.header_text.set('Get to work!')
 
-            print('play transition audio')
             play_audio(g_audio_pomodoro, False)
             self.transition(transition_cycles)
 
@@ -603,8 +615,12 @@ class state_run_pomodoro(timer_state):
     def disable(self):
         super().disable()
         self.is_running = False
-        self.timer.root.after_cancel(self.after_id)
-        self.timer.root.after_cancel(self.transition_after_id)
+
+        if self.after_id:
+            self.timer.root.after_cancel(self.after_id)
+
+        if self.transition_after_id:
+            self.timer.root.after_cancel(self.transition_after_id)
 
 
 class state_alarm(timer_state):
