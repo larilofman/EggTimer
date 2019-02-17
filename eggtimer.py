@@ -39,8 +39,6 @@ def add_menu(root, timer):
         label="Egg", variable=timer.timer_mode, value=0, command=timer.toggle_timer_mode)
     mode_menu.add_radiobutton(label="Pomodoro", variable=timer.timer_mode,
                               value=1, command=timer.toggle_timer_mode)
-    # mode_menu.add_separator()
-    # mode_menu.add_command(label="Exit", command=empty_func)
 
     settings_menu = Menu(menu, tearoff=0)
     menu.add_cascade(label="Display mode", menu=settings_menu)
@@ -152,14 +150,11 @@ class timer():
     def toggle_timer_mode(self):
         timer_id = self.timer_mode.get()
         save_setting({'timer_mode': timer_id})
-        print(type(self.state), state_run, state_set)
         if timer_id == 1:
             if type(self.state) != state_set_pomodoro:
-                print('change to pomodoro')
                 self.change_state_to_set_pomodoro()
         else:
             if type(self.state) != state_run and type(self.state) != state_set and type(self.state) != state_alarm:
-                print('change to normal')
                 self.change_state_to_set()
 
 
@@ -466,10 +461,6 @@ class state_set_pomodoro(timer_state):
         digit_input_frame.grid(row=1, columnspan=self.columns)
         setup_grid(digit_input_frame, 7, 4, 0)
 
-        # self.state_header = Label(
-        #     self.state_frame, font=(g_font_name, 24), textvariable=self.header_text, bg=g_color_bg)
-        # self.state_header.grid(row=0, columnspan=self.columns)
-
         # Digit inputs for work
         work_time = self.timer.get_time_from_secs(self.timer.pomodoro_work)
 
@@ -496,11 +487,11 @@ class state_set_pomodoro(timer_state):
             g_font_name, 16), text='Break:', bg=g_color_bg)
         input_text_work.place(relx=.72, rely=.26, anchor="n")
 
-        self.work_hrs = digit_input(
+        self.break_hrs = digit_input(
             digit_input_frame, break_time['hrs'], 'h', 4, 1, self.check_if_can_start, max_value=99)
-        self.work_mins = digit_input(
+        self.break_mins = digit_input(
             digit_input_frame, break_time['mins'], 'min', 5, 1, self.check_if_can_start)
-        self.work_secs = digit_input(
+        self.break_secs = digit_input(
             digit_input_frame, break_time['secs'], 's', 6, 1, self.check_if_can_start)
 
         # Start button
@@ -511,10 +502,11 @@ class state_set_pomodoro(timer_state):
 
     def start_timer(self):
 
-        for digit in (self.input_hrs, self.input_mins, self.input_secs):
+        for digit in (self.work_hrs, self.work_mins, self.work_secs, self.break_hrs, self.break_mins, self.break_secs):
+            print(digit.get_value())
             digit.clamp_value()
 
-        self.timer.change_state_to_run()
+        # self.timer.change_state_to_run_pomodoro()
         self.button_start.focus()
 
     def check_if_can_start(self, *kwargs):
@@ -569,6 +561,8 @@ class digit_input():
     def on_focus_out(self, event):
         if self.value.get() == '00':
             self.value.set(0)
+        elif len(self.value.get()) > 1 and self.value.get()[0] == '0':
+            self.value.set(self.value.get()[1:])
         self.clamp_value()
 
     def clamp_value(self):
