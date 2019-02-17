@@ -67,6 +67,41 @@ def stop_audio():
     winsound.PlaySound(None, winsound.SND_PURGE)
 
 
+def get_time_with_zeros(time):
+    for key, value in time.items():
+        if value < 10:
+            time[key] = '0' + str(value)
+    return time
+
+
+def get_alarm_colors():
+    """Returns a list of color gradient"""
+    color1 = Color(g_color_bg)
+    color2 = Color(g_color_alarm)
+    return list(color1.range_to(color2, 30))
+
+
+def set_next_color(passer):
+    """Finds next color from passer's color scale and modifies its index"""
+
+    passer.set_bg_color(passer.color_scale[passer.current_color_index])
+
+    # Color changing towards alarm color
+    if passer.color_change_direction > 0:
+        # Increase index if there is another color
+        if passer.current_color_index < len(passer.color_scale) - 1:
+            passer.current_color_index += 1
+        else:  # Start going towards normal color
+            passer.color_change_direction = -1
+            passer.current_color_index -= 1
+    else:
+        if passer.current_color_index > 0:
+            passer.current_color_index -= 1
+        else:
+            passer.color_change_direction = 1
+            passer.current_color_index += 1
+
+
 class timer():
     """Handles states."""
 
@@ -319,7 +354,7 @@ class state_run(timer_state):
 
         # Add leading zero to single digits
         if self.timer.display_mode.get():
-            time_dict = self.get_time_with_zeros(time_dict)
+            time_dict = get_time_with_zeros(time_dict)
 
         hrs = time_dict['hrs']
         mins = time_dict['mins']
@@ -331,12 +366,6 @@ class state_run(timer_state):
             self.time_var.set(f"{mins}:{secs}")
         else:
             self.time_var.set(f"{hrs}:{mins}:{secs}")
-
-    def get_time_with_zeros(self, time):
-        for key, value in time.items():
-            if value < 10:
-                time[key] = '0' + str(value)
-        return time
 
     def start(self):
         """Starts the timer
@@ -449,7 +478,7 @@ class state_run_pomodoro(timer_state):
 
         # Add leading zero to single digits
         if self.timer.display_mode.get():
-            time_dict = self.get_time_with_zeros(time_dict)
+            time_dict = get_time_with_zeros(time_dict)
 
         hrs = time_dict['hrs']
         mins = time_dict['mins']
@@ -461,12 +490,6 @@ class state_run_pomodoro(timer_state):
             self.time_var.set(f"{mins}:{secs}")
         else:
             self.time_var.set(f"{hrs}:{mins}:{secs}")
-
-    def get_time_with_zeros(self, time):
-        for key, value in time.items():
-            if value < 10:
-                time[key] = '0' + str(value)
-        return time
 
     def start(self):
         """Starts the timer
@@ -548,7 +571,7 @@ class state_alarm(timer_state):
 
     def __init__(self, timer):
 
-        self.color_scale = self.get_alarm_colors()
+        self.color_scale = get_alarm_colors()
         super().__init__(timer)
 
     def init_elements(self):
@@ -569,38 +592,13 @@ class state_alarm(timer_state):
         self.change_color()
         self.start_alarm_sound()
 
-    def get_alarm_colors(self):
-        """Returns a list of color gradient"""
-        color1 = Color(g_color_bg)
-        color2 = Color(g_color_alarm)
-        return list(color1.range_to(color2, 30))
-
     def change_color(self):
-        """Flashes app background and plays a sound"""
-        self.set_next_color()
+        """Flashes app background"""
+        set_next_color(self)
         self.after_id = self.timer.root.after(30, self.change_color)
 
     def start_alarm_sound(self):
         play_audio(g_audio_alarm)
-
-    def set_next_color(self):
-
-        self.set_bg_color(self.color_scale[self.current_color_index])
-
-        # Color changing towards alarm color
-        if self.color_change_direction > 0:
-            # Increase index if there is another color
-            if self.current_color_index < len(self.color_scale) - 1:
-                self.current_color_index += 1
-            else:  # Start going towards normal color
-                self.color_change_direction = -1
-                self.current_color_index -= 1
-        else:
-            if self.current_color_index > 0:
-                self.current_color_index -= 1
-            else:
-                self.color_change_direction = 1
-                self.current_color_index += 1
 
     def set_bg_color(self, color):
         self.state_frame.configure(background=color)
