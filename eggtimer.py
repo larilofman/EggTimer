@@ -100,7 +100,14 @@ class timer():
         self.create_or_set_state(state_set_pomodoro)
 
     def change_state_to_run_pomodoro(self):
-        print('run pomodoro')
+        pomodoro_timers = self.get_pomodoro_time_in_secs()
+
+        if pomodoro_timers[0] > 0 and pomodoro_timers[1] > 0:
+            self.pomodoro_work = pomodoro_timers[0]
+            self.pomodoro_break = pomodoro_timers[1]
+            save_setting({'pomodoro_work': self.pomodoro_work})
+            save_setting({'pomodoro_break': self.pomodoro_break})
+            self.create_or_set_state(state_run_pomodoro)
 
     def create_or_set_state(self, new_state):
         """Sets state to a new one
@@ -143,6 +150,20 @@ class timer():
         total_seconds = hrs*3600 + mins*60 + secs
         return total_seconds
 
+    def get_pomodoro_time_in_secs(self):
+        """Converts pomodoro hours, minutes and seconds to seconds"""
+        work_hrs = int(self.state.work_hrs.get_value())
+        work_mins = int(self.state.work_mins.get_value())
+        work_secs = int(self.state.work_secs.get_value())
+        work_total_seconds = work_hrs*3600 + work_mins*60 + work_secs
+
+        break_hrs = int(self.state.break_hrs.get_value())
+        break_mins = int(self.state.break_mins.get_value())
+        break_secs = int(self.state.break_secs.get_value())
+        break_total_seconds = break_hrs*3600 + break_mins*60 + break_secs
+
+        return work_total_seconds, break_total_seconds
+
     def toggle_display_mode(self):
         """Saves display mode when it's changed.
 
@@ -157,7 +178,7 @@ class timer():
         timer_id = self.timer_mode.get()
         save_setting({'timer_mode': timer_id})
         if timer_id == 1:
-            if type(self.state) != state_set_pomodoro:
+            if type(self.state) != state_set_pomodoro and type(self.state) != state_run_pomodoro:
                 self.change_state_to_set_pomodoro()
         else:
             if type(self.state) != state_run and type(self.state) != state_set and type(self.state) != state_alarm:
@@ -377,6 +398,151 @@ class state_run(timer_state):
         self.timer.root.after_cancel(self.after_id)
 
 
+class state_run_pomodoro(timer_state):
+    """State for setting the timer."""
+
+    def __init__(self, timer):
+        self.time_left = 0
+        self.time_var = StringVar()
+        self.time_started = 0  # When was timer started
+        self.time_paused = 0  # When was timer paused
+        self.time_paused_total = 0  # How long has timer been paused for
+        super().__init__(timer)
+
+    def init_elements(self):
+
+        super().init_elements()
+
+        # Time output
+        time_output = Entry(self.state_frame, width=8,
+                            font=(g_font_name, 44), justify=CENTER, textvariable=self.time_var)
+        time_output['state'] = 'readonly'
+        time_output.grid(row=1, columnspan=self.columns, pady=(0, 24))
+
+        # Buttons
+        self.button_start = Button(self.state_frame, height=1, width=5, font=(
+            g_font_name, 24), text='Start', command=self.start)
+        self.button_start.grid(row=2, column=1)
+        self.button_start.grid_remove()  # Hide start button at start
+
+        self.button_pause = Button(self.state_frame, height=1,
+                                   width=5, font=(g_font_name, 24), text='Pause', command=self.pause)
+        self.button_pause.grid(row=2, column=1)
+
+        self.button_stop = Button(self.state_frame, height=1,
+                                  width=5, font=(g_font_name, 24), text='Stop', command=self.stop)
+        self.button_stop.grid(row=2, column=3)
+
+    def enable(self):
+        super().enable()
+        self.header_text.set('Work remaining:')
+        self.after_id = None
+        self.time_started = time.time()
+        self.time_paused = 0
+        self.time_paused_total = 0
+        self.on_break = False
+        self.start()
+
+    def update_time_var(self):
+
+        time_dict = self.timer.get_time_from_secs(self.time_left)
+
+        # Add leading zero to single digits
+        if self.timer.display_mode.get():
+            time_dict = self.get_time_with_zeros(time_dict)
+
+        hrs = time_dict['hrs']
+        mins = time_dict['mins']
+        secs = time_dict['secs']
+
+        if not hrs and not mins:
+            self.time_var.set(f"{secs}")
+        elif not hrs:
+            self.time_var.set(f"{mins}:{secs}")
+        else:
+            self.time_var.set(f"{hrs}:{mins}:{secs}")
+
+    def get_time_with_zeros(self, time):
+        for key, value in time.items():
+            if value < 10:
+                time[key] = '0' + str(value)
+        return time
+
+    def start(self):
+        """Starts the timer
+
+        Also toggles the visible button and calculates total time spent paused
+        """
+        self.is_running = True
+        self.button_start.grid_remove()
+        self.button_pause.grid()
+
+        if self.time_paused:
+            self.time_paused_total += time.time() - self.time_paused
+
+        self.run()
+
+    def pause(self):
+        """Pauses the timer and toggles visible button"""
+        self.is_running = False
+        self.button_pause.grid_remove()
+        self.button_start.grid()
+        self.time_paused = time.time()
+
+    def stop(self):
+        """Stops the timer and changes state to set"""
+        self.is_running = False
+        self.timer.change_state_to_set_pomodoro()
+        self.button_stop.focus()
+
+    def run(self):
+        """Runs the timer
+
+        Updates output field and calculates time remaining on every iteration.
+        """
+        if self.is_running:
+
+            if self.on_break:
+                time_var = self.timer.pomodoro_break
+            else:
+                time_var = self.timer.pomodoro_work
+
+            # Add timer duration and total time it's been paused to starting time and reduce current time
+            self.time_left = self.time_started + time_var + \
+                self.time_paused_total - time.time()
+
+            if self.time_left < 0:
+                self.time_left = 0
+
+            # Alarm if time's up
+            if self.time_left <= 0:
+                self.cycle_work_break()
+
+            # Update time field and rerun after a while
+            self.update_time_var()
+            self.after_id = self.timer.root.after(100, self.run)
+
+    def cycle_work_break(self):
+        """Changes state to alarm after at least one iteration of run"""
+        if self.after_id:
+            self.on_break = not self.on_break
+
+            if self.on_break:
+                self.header_text.set('Break remaining:')
+            else:
+                self.header_text.set('Work remaining:')
+
+            self.after_id = None
+            self.time_started = time.time()
+            self.time_paused = 0
+            self.time_paused_total = 0
+
+    def disable(self):
+        super().disable()
+        self.is_running = False
+        self.timer.root.after_cancel(self.after_id)
+
+
 class state_alarm(timer_state):
     """State for setting the timer."""
 
@@ -511,8 +677,8 @@ class state_set_pomodoro(timer_state):
         for digit in (self.work_hrs, self.work_mins, self.work_secs, self.break_hrs, self.break_mins, self.break_secs):
             digit.clamp_value()
 
-        self.timer.change_state_to_run_pomodoro()
         self.button_start.focus()
+        self.timer.change_state_to_run_pomodoro()
 
     def check_if_can_start(self, *kwargs):
         """Enable start button if there is a work and break time set"""
