@@ -48,10 +48,6 @@ def add_menu(root, timer):
         label="hh:mm:ss", variable=timer.display_mode, value=1, command=timer.toggle_display_mode)
 
 
-def empty_func():
-    pass
-
-
 def setup_grid(element, columns, rows, row_height):
     """Create a grid of the size columns*rows on element."""
 
@@ -103,6 +99,9 @@ class timer():
     def change_state_to_set_pomodoro(self):
         self.create_or_set_state(state_set_pomodoro)
 
+    def change_state_to_run_pomodoro(self):
+        print('run pomodoro')
+
     def create_or_set_state(self, new_state):
         """Sets state to a new one
 
@@ -145,9 +144,16 @@ class timer():
         return total_seconds
 
     def toggle_display_mode(self):
+        """Saves display mode when it's changed.
+
+        0 = h:m:s
+        1 = hh:mm:ss
+        Timer displays read the variable and format accordingly
+        """
         save_setting({'display_mode': self.display_mode.get()})
 
     def toggle_timer_mode(self):
+        """Toggles mode between timer(0) and pomodoro(1)"""
         timer_id = self.timer_mode.get()
         save_setting({'timer_mode': timer_id})
         if timer_id == 1:
@@ -503,21 +509,21 @@ class state_set_pomodoro(timer_state):
     def start_timer(self):
 
         for digit in (self.work_hrs, self.work_mins, self.work_secs, self.break_hrs, self.break_mins, self.break_secs):
-            print(digit.get_value())
             digit.clamp_value()
 
-        # self.timer.change_state_to_run_pomodoro()
+        self.timer.change_state_to_run_pomodoro()
         self.button_start.focus()
 
     def check_if_can_start(self, *kwargs):
-        pass
-    #     """Enable start button if there is a time set"""
-    #     for digit in (self.input_hrs, self.input_mins, self.input_secs):
-    #         if digit.get_value() > 0:
-    #             self.button_start.config(state="normal")
-    #             return
+        """Enable start button if there is a work and break time set"""
+        for digit in (self.work_hrs, self.work_mins, self.work_secs):
+            if digit.get_value() > 0:
+                for digit in (self.break_hrs, self.break_mins, self.break_secs):
+                    if digit.get_value() > 0:
+                        self.button_start.config(state="normal")
+                        return
 
-    #     self.button_start.config(state="disabled")
+        self.button_start.config(state="disabled")
 
 
 class digit_input():
