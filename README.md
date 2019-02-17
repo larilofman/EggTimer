@@ -21,4 +21,4 @@ Alarm state:
 - plays an alarm sound with winsound
 - ok button
 
-Alarm sound by Mike Koenig 
+Sounds by Mike Koenig, downloaded from soundbible.com

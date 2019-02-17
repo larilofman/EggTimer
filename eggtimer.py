@@ -7,7 +7,8 @@ from settings import load_setting, load_settings, save_setting
 g_font_name = "Verdana"
 g_color_bg = '#cdcdcd'
 g_color_alarm = '#ff0000'
-g_audio_alarm = 'Radio-Interruption-SoundBible.com-1434341263.wav'
+g_audio_alarm = 'Sounds/Radio-Interruption-SoundBible.com-1434341263.wav'
+g_audio_pomodoro = 'Sounds/Ship_Bell-Mike_Koenig-1911209136.wav'
 
 
 def init_app():
@@ -58,9 +59,13 @@ def setup_grid(element, columns, rows, row_height):
         element.rowconfigure(r, weight=1, minsize=row_height)
 
 
-def play_audio(audio_file):
-    winsound.PlaySound(audio_file,
-                       winsound.SND_LOOP + winsound.SND_ASYNC)
+def play_audio(audio_file, loop=True):
+
+    if loop:
+        winsound.PlaySound(audio_file,
+                           winsound.SND_LOOP + winsound.SND_ASYNC)
+    else:
+        winsound.PlaySound(audio_file, winsound.SND_ASYNC)
 
 
 def stop_audio():
@@ -554,6 +559,8 @@ class state_run_pomodoro(timer_state):
                 self.header_text.set('Break remaining:')
             else:
                 self.header_text.set('Work remaining:')
+
+            play_audio(g_audio_pomodoro, False)
 
             self.after_id = None
             self.time_started = time.time()
