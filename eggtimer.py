@@ -152,11 +152,15 @@ class timer():
     def toggle_timer_mode(self):
         timer_id = self.timer_mode.get()
         save_setting({'timer_mode': timer_id})
-
+        print(type(self.state), state_run, state_set)
         if timer_id == 1:
-            self.change_state_to_set_pomodoro()
+            if type(self.state) != state_set_pomodoro:
+                print('change to pomodoro')
+                self.change_state_to_set_pomodoro()
         else:
-            self.change_state_to_set()
+            if type(self.state) != state_run and type(self.state) != state_set and type(self.state) != state_alarm:
+                print('change to normal')
+                self.change_state_to_set()
 
 
 class timer_state():
@@ -202,7 +206,7 @@ class state_set(timer_state):
 
         super().init_elements()
 
-        self.header_text.set('Set time:')
+        self.header_text.set('Set time')
 
         # Digit container
         digit_input_frame = Frame(self.state_frame, bg=g_color_bg)
@@ -212,11 +216,11 @@ class state_set(timer_state):
         # Digit inputs
         time = self.timer.get_time_from_secs(self.timer.seconds)
         self.input_hrs = digit_input(
-            digit_input_frame, time['hrs'], 'h', 1, self.check_if_can_start, max_value=99)
+            digit_input_frame, time['hrs'], 'h', 1, 1, self.check_if_can_start, max_value=99)
         self.input_mins = digit_input(
-            digit_input_frame, time['mins'], 'min', 2, self.check_if_can_start)
+            digit_input_frame, time['mins'], 'min', 2, 1, self.check_if_can_start)
         self.input_secs = digit_input(
-            digit_input_frame, time['secs'], 's', 3, self.check_if_can_start)
+            digit_input_frame, time['secs'], 's', 3, 1, self.check_if_can_start)
 
         # Start button
         self.button_start = Button(self.state_frame, height=1,
@@ -455,33 +459,49 @@ class state_set_pomodoro(timer_state):
 
         super().init_elements()
 
-        self.header_text.set('Set pomodoro timers:')
+        self.header_text.set('Set pomodoro timers')
 
         # Digit container
         digit_input_frame = Frame(self.state_frame, bg=g_color_bg)
         digit_input_frame.grid(row=1, columnspan=self.columns)
         setup_grid(digit_input_frame, 7, 4, 0)
 
+        # self.state_header = Label(
+        #     self.state_frame, font=(g_font_name, 24), textvariable=self.header_text, bg=g_color_bg)
+        # self.state_header.grid(row=0, columnspan=self.columns)
+
         # Digit inputs for work
         work_time = self.timer.get_time_from_secs(self.timer.pomodoro_work)
+
+        # Work label
+        input_text_work = Label(self.state_frame, font=(
+            g_font_name, 16), text='Work:', bg=g_color_bg)
+        input_text_work.place(relx=.29, rely=.26, anchor="n")
+
         self.work_hrs = digit_input(
-            digit_input_frame, work_time['hrs'], 'h', 0, self.check_if_can_start, max_value=99)
+            digit_input_frame, work_time['hrs'], 'h', 0, 1, self.check_if_can_start, max_value=99)
         self.work_mins = digit_input(
-            digit_input_frame, work_time['mins'], 'min', 1, self.check_if_can_start)
+            digit_input_frame, work_time['mins'], 'min', 1, 1, self.check_if_can_start)
         self.work_secs = digit_input(
-            digit_input_frame, work_time['secs'], 's', 2, self.check_if_can_start)
+            digit_input_frame, work_time['secs'], 's', 2, 1, self.check_if_can_start)
 
         # Gap between work and break timers
         digit_input_frame.columnconfigure(3, minsize=40)
 
         # Digit inputs for break
         break_time = self.timer.get_time_from_secs(self.timer.pomodoro_break)
+
+        # Break label
+        input_text_work = Label(self.state_frame, font=(
+            g_font_name, 16), text='Break:', bg=g_color_bg)
+        input_text_work.place(relx=.72, rely=.26, anchor="n")
+
         self.work_hrs = digit_input(
-            digit_input_frame, break_time['hrs'], 'h', 4, self.check_if_can_start, max_value=99)
+            digit_input_frame, break_time['hrs'], 'h', 4, 1, self.check_if_can_start, max_value=99)
         self.work_mins = digit_input(
-            digit_input_frame, break_time['mins'], 'min', 5, self.check_if_can_start)
+            digit_input_frame, break_time['mins'], 'min', 5, 1, self.check_if_can_start)
         self.work_secs = digit_input(
-            digit_input_frame, break_time['secs'], 's', 6, self.check_if_can_start)
+            digit_input_frame, break_time['secs'], 's', 6, 1, self.check_if_can_start)
 
         # Start button
         self.button_start = Button(self.state_frame, height=1,
@@ -510,7 +530,7 @@ class state_set_pomodoro(timer_state):
 
 class digit_input():
 
-    def __init__(self, frame, value, text, column, checker_func, max_value=59):
+    def __init__(self, frame, value, text, column, row, checker_func, max_value=59):
 
         self.frame = frame
         self.max_value = max_value
@@ -521,22 +541,22 @@ class digit_input():
         self.value.trace_add('write', checker_func)
         self.digit_field = Entry(self.frame, width=2, font=(
             g_font_name, 24), validate='all', validatecommand=(self.vcmd, '%P'), justify=CENTER, textvariable=self.value)
-        self.digit_field.grid(row=1, column=column, padx=5)
+        self.digit_field.grid(row=row, column=column, padx=5)
         self.digit_field.bind("<Button-1>", self.on_click)
         self.digit_field.bind("<FocusOut>", self.on_focus_out)
 
         # Buttons
         self.button_plus = Button(frame, height=1, width=3, font=(
             g_font_name, 14), text="+", command=self.add)
-        self.button_plus.grid(row=0, column=column, padx=5)
+        self.button_plus.grid(row=row-1, column=column, padx=5)
 
         self.button_minus = Button(frame, height=1, width=3, font=(
             g_font_name, 14), text="-", command=self.substract)
-        self.button_minus.grid(row=2, column=column, padx=5)
+        self.button_minus.grid(row=row+1, column=column, padx=5)
 
         # Unit text
         self.unit_text = Label(frame, text=text, font=(g_font_name, 12), bg=g_color_bg).grid(
-            row=4, column=column)
+            row=row+3, column=column)
 
     def get_value(self):
         return int(self.value.get()) if self.value.get() else 0
