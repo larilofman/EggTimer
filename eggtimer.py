@@ -65,7 +65,8 @@ def play_audio(audio_file, loop=True):
         winsound.PlaySound(audio_file,
                            winsound.SND_LOOP + winsound.SND_ASYNC)
     else:
-        winsound.PlaySound(audio_file, winsound.SND_ASYNC)
+        winsound.PlaySound(
+            audio_file, winsound.SND_FILENAME + winsound.SND_ASYNC)
 
 
 def stop_audio():
@@ -521,6 +522,7 @@ class state_run_pomodoro(timer_state):
         self.is_running = False
         self.timer.change_state_to_set_pomodoro()
         self.button_stop.focus()
+        stop_audio()
 
     def run(self):
         """Runs the timer
@@ -566,6 +568,7 @@ class state_run_pomodoro(timer_state):
             else:
                 self.header_text.set('Get to work!')
 
+            print('play transition audio')
             play_audio(g_audio_pomodoro, False)
             self.transition(transition_cycles)
 
@@ -576,7 +579,8 @@ class state_run_pomodoro(timer_state):
         """
         if cycles > 0:
             set_next_color(self)
-            self.timer.root.after(30, self.transition, cycles - 1)
+            self.transition_after_id = self.timer.root.after(
+                30, self.transition, cycles - 1)
         else:
             self.end_transition()
 
@@ -587,7 +591,6 @@ class state_run_pomodoro(timer_state):
         else:
             self.header_text.set('Work remaining:')
 
-        self.after_id = None
         self.time_started = time.time()
         self.time_paused = 0
         self.time_paused_total = 0
@@ -601,6 +604,7 @@ class state_run_pomodoro(timer_state):
         super().disable()
         self.is_running = False
         self.timer.root.after_cancel(self.after_id)
+        self.timer.root.after_cancel(self.transition_after_id)
 
 
 class state_alarm(timer_state):
