@@ -79,13 +79,6 @@ def get_time_with_zeros(time):
     return time
 
 
-def get_alarm_colors():
-    """Returns a list of color gradient"""
-    color1 = Color(g_color_bg)
-    color2 = Color(g_color_alarm)
-    return list(color1.range_to(color2, 30))
-
-
 def set_next_color(passer):
     """Finds next color from passer's color scale and modifies its index"""
 
@@ -436,6 +429,8 @@ class state_run_pomodoro(timer_state):
     """State for setting the timer."""
 
     def __init__(self, timer):
+        self.color_scale = list(
+            Color(g_color_bg).range_to(Color(g_color_alarm), 25))
         self.time_left = 0
         self.time_var = StringVar()
         self.time_started = 0  # When was timer started
@@ -475,6 +470,7 @@ class state_run_pomodoro(timer_state):
         self.time_paused = 0
         self.time_paused_total = 0
         self.on_break = False
+        self.set_bg_color(g_color_bg)
         self.start()
 
     def update_time_var(self):
@@ -507,6 +503,9 @@ class state_run_pomodoro(timer_state):
 
         if self.time_paused:
             self.time_paused_total += time.time() - self.time_paused
+
+        self.button_pause.config(state="normal")
+        self.button_start.config(state="normal")
 
         self.run()
 
@@ -544,28 +543,59 @@ class state_run_pomodoro(timer_state):
 
             # Alarm if time's up
             if self.time_left <= 0:
-                self.cycle_work_break()
+                self.start_transition()
 
             # Update time field and rerun after a while
             self.update_time_var()
             self.after_id = self.timer.root.after(100, self.run)
 
-    def cycle_work_break(self):
-        """Changes state to alarm after at least one iteration of run"""
+    def start_transition(self):
+        """Starts transition from work to pause or vice versa"""
         if self.after_id:
+            self.pause()
             self.on_break = not self.on_break
+            transition_cycles = 51  # How many times to change bg color. 51 takes to red and back
+            self.color_change_direction = 1  # Start by climbing to red
+            self.current_color_index = 0
+
+            self.button_pause.config(state="disabled")
+            self.button_start.config(state="disabled")
 
             if self.on_break:
-                self.header_text.set('Break remaining:')
+                self.header_text.set('Time for a break!')
             else:
-                self.header_text.set('Work remaining:')
+                self.header_text.set('Get to work!')
 
             play_audio(g_audio_pomodoro, False)
+            self.transition(transition_cycles)
 
-            self.after_id = None
-            self.time_started = time.time()
-            self.time_paused = 0
-            self.time_paused_total = 0
+    def transition(self, cycles):
+        """Changes background color certain number of times
+
+        Called recursively.
+        """
+        if cycles > 0:
+            set_next_color(self)
+            self.timer.root.after(30, self.transition, cycles - 1)
+        else:
+            self.end_transition()
+
+    def end_transition(self):
+        """End the transition and resets and restarts timer"""
+        if self.on_break:
+            self.header_text.set('Break remaining:')
+        else:
+            self.header_text.set('Work remaining:')
+
+        self.after_id = None
+        self.time_started = time.time()
+        self.time_paused = 0
+        self.time_paused_total = 0
+        self.start()
+
+    def set_bg_color(self, color):
+        self.state_frame.configure(background=color)
+        self.state_header.configure(background=color)
 
     def disable(self):
         super().disable()
@@ -578,7 +608,8 @@ class state_alarm(timer_state):
 
     def __init__(self, timer):
 
-        self.color_scale = get_alarm_colors()
+        self.color_scale = list(
+            Color(g_color_bg).range_to(Color(g_color_alarm), 30))
         super().__init__(timer)
 
     def init_elements(self):
