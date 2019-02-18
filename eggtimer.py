@@ -32,7 +32,7 @@ def init_app():
     setup_grid(root, 1, 1, 0)
 
     root.title('EggTimer')
-    root.call('wm', 'iconphoto', root._w, PhotoImage(file='icon.png'))
+    root.iconbitmap('icon_egg.ico')
 
     main_timer = timer(root)
 

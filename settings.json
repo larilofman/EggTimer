@@ -1,7 +1,7 @@
 {
   "timer_seconds": 3,
-  "pomodoro_work": 8,
+  "pomodoro_work": 5,
   "pomodoro_break": 3,
-  "timer_mode": 1,
+  "timer_mode": 0,
   "display_mode": 1
 }
