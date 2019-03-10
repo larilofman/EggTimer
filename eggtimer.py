@@ -3,13 +3,17 @@ from tkinter import *
 from colour import Color
 import winsound
 from settings import load_setting, load_settings, save_setting
+from ctypes import *
+import win32con 
+import win32gui
 
+ 
 g_font_name = "Verdana"
 g_color_bg = '#cdcdcd'
 g_color_alarm = '#ff0000'
 g_audio_alarm = 'Sounds/Radio-Interruption-SoundBible.com-1434341263.wav'
 g_audio_pomodoro = 'Sounds/Ship_Bell-Mike_Koenig-1911209136.wav'
-
+g_current_window = None #ID for the app, set with flash_taskbar_icon function
 
 def init_app():
     """Sets up application window and starts loop."""
@@ -73,6 +77,19 @@ def setup_grid(element, columns, rows, row_height):
 
     for r in range(0, rows):
         element.rowconfigure(r, weight=1, minsize=row_height)
+        
+
+def flash_taskbar_icon(num_flashes=10):
+    """Flashes the taskbar icon"""
+    global g_current_window
+
+    if not g_current_window:
+        g_current_window = win32gui.FindWindow('TkTopLevel','EggTimer')
+
+    if not g_current_window:
+        return
+
+    win32gui.FlashWindowEx(g_current_window, win32con.FLASHW_ALL | win32con.FLASHW_TIMERNOFG , num_flashes , 0 )
 
 
 def play_audio(audio_file, loop=True):
@@ -80,6 +97,8 @@ def play_audio(audio_file, loop=True):
     if loop:
         winsound.PlaySound(audio_file,
                            winsound.SND_LOOP + winsound.SND_ASYNC)
+        # Also flash taskbar icon when looping
+        flash_taskbar_icon()
     else:
         winsound.PlaySound(
             audio_file, winsound.SND_FILENAME + winsound.SND_ASYNC)
