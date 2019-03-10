@@ -59,6 +59,11 @@ def add_menu(root, timer):
     settings_menu.add_radiobutton(
         label="hh:mm:ss", variable=timer.display_mode, value=1, command=timer.toggle_display_mode)
 
+    tools_menu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="Tools", menu=tools_menu)
+    tools_menu.add_command(label="Test volume", command=lambda: play_audio(
+        'Sounds/Ship_Bell-Mike_Koenig-1911209136.wav', False))
+
 
 def setup_grid(element, columns, rows, row_height):
     """Create a grid of the size columns*rows on element."""
